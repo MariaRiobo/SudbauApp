@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrosión</title>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-corrosion">
+            <div class="header-left">
+                <img src="ruta/a/tu/logo.png" alt="Logo de la empresa" class="logo">
+                <h1 class="title">Corrosión</h1>
+            </div>
+            <div class="header-right">
+                <p>Botón numero: <span id="contador">1</span></p>
+            </div>
+        </div>
+
+        <div class="botones-container">
+            <button class="btn-color amarillo">Amarillo</button>
+            <button class="btn-color azul">Azul</button>
+            <button class="btn-color verde">Verde</button>
+            <button class="btn-color rojo">Rojo</button>
+        </div>
+        
+        <button class="btn-color blanco">Blanco</button>
+
+        <div class="controles">
+            <a href="InicioSesion.html" class="btn-volver">Volver</a>
+            <button  class="btn-parada">Parada</button>
+        </div>
+
+        <div class="justificacion-container" style="display: none;">
+            <p>Fecha y hora: <span id="fecha-hora"></span></p>
+            <label for="justificacion">Justificación:</label>
+            <textarea id="justificacion" rows="4"></textarea>
+            <button class="btn-justificar">Justificar</button>
+        </div>
+
+        <a href="desgaste.html" > <button class="btn-arranque" style="display: none;">Arranque</button></a>
+
+    </div>
+
+    <script>
+        // Funcionalidad para el contador y la lógica de los botones
+        const contadorSpan = document.getElementById('contador');
+        const justificacionContainer = document.querySelector('.justificacion-container');
+        const btnParada = document.querySelector('.btn-parada');
+        const btnArranque = document.querySelector('.btn-arranque');
+        const fechaHoraSpan = document.getElementById('fecha-hora');
+        const btnJustificar = document.querySelector('.btn-justificar');
+
+        // Lógica del botón de parada
+        btnParada.addEventListener('click', () => {
+            const now = new Date();
+            fechaHoraSpan.textContent = now.toLocaleString();
+            justificacionContainer.style.display = 'block';
+        });
+
+        // Lógica para mostrar el botón de arranque al justificar
+        btnJustificar.addEventListener('click', () => {
+            btnArranque.style.display = 'block';
+        });
+    </script>
+
+  
+</body>
+</html>

@@ -13,9 +13,8 @@
             <div class="header-left">
                 <img src="img/logo.png" alt="Logo de la empresa" class="logo">
                 <h1 class="title">DESGASTE</h1>
-            </div>
-            <div class="header-right">
-                <p>Botón Nº: <span id="contador">1</span></p>
+                <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
+
             </div>
         </div>
 
@@ -37,17 +36,23 @@
     </div>
 
     <script>
-        // Funcionalidad para el contador y la lógica de los botones
-        const contadorSpan = document.getElementById('contador');
-        const justificacionContainer = document.querySelector('.justificacion-container');
-        const btnParada = document.querySelector('.btn-parada');
-        const btnArranque = document.querySelector('.btn-arranque');
-        const fechaHoraSpan = document.getElementById('fecha-hora');
-        const btnJustificar = document.querySelector('.btn-justificar');
 
-       
+        // Obtener datos guardados de la intervención
+        const rawData = localStorage.getItem('intervencionActual');
+
+        if (!rawData) {
+            // Si alguien entró directo sin iniciar sesión/intervención, lo saco
+            window.location.href = 'InicioSesion.html';
+        } else {
+            const intervencion = JSON.parse(rawData);
+
+            // Mostrar número de tubo en <span id="numero-tubo">
+            const numeroTuboSpan = document.getElementById('numero-tubo');
+            if (numeroTuboSpan) {
+            numeroTuboSpan.textContent = intervencion.tuboActual;
+            }
+        }  
     </script>
 
-  
 </body>
 </html>

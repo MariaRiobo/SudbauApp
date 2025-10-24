@@ -14,14 +14,28 @@
           <h1 class="title">Iniciar sesión</h1>
        </div>
 
-        <form action="Corrosion.html" method="post" class="formulario">
+        <form  class="formulario" id="inicioForm">
             <div class="form-group">
                 <label for="fecha">Fecha de intervención</label>
                 <input type="date" id="fecha" name="fecha" required>
             </div>
             <div class="form-group">
                 <label for="cliente">Cliente</label>
-                <input type="text" id="cliente" name="cliente" required>
+                <select id="cliente" name="cliente" required>
+                    <option value="" disabled selected>Seleccionar cliente...</option>
+                    <option value="Paesa">PAESA</option>
+                    <option value="Paesa Mendoza">PAESA MENDOZA</option>
+                    <option value="PCR">PCR</option>
+                    <option value="OILSTONE">OILSTONE</option>
+                    <option value="SHELL">SHELL</option>
+                    <option value="president petroleum">PRESIDENT PETROLEUM</option>
+                    <option value="vista & oil">VISTA&OIL</option>
+                    <option value="YPF">YPF</option>
+                    <option value="Madalena Energy">MADALENA ENERGY</option>
+                    <option value="Pecom">PECOM</option>
+                    <option value="cgc">CGC</option>
+                    <option value="capsa">CAPSA</option>
+                </select>
             </div>
             <div class="form-group">
                 <label for="area">Área</label>
@@ -37,7 +51,26 @@
             </div>
             <div class="form-group">
                 <label for="operador">Operador</label>
-                <input type="text" id="operador" name="operador" required>
+                <select id="operador" name="operador" required>
+                    <option value="" disabled selected>Seleccionar operador...</option>
+                    <option value="Rivas Martín">RIVAS MARTÍN</option>
+                    <option value="Sapuri Cristian">SAPURI CRISTIAN</option>
+                    <option value="Marino Leandro">MARINO LEANDRO</option>
+                    <option value="Luzon Walter">LUZON WALTER</option>
+                    <option value="Cabeza Gastón">CABEZA GASTÓN</option>
+                    <option value="Vasquez Osvaldo">VASQUEZ OSVALDO</option>
+                    <option value="Sapuri Arturo">SAPURI ARTURO</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ayudante">Ayudante</label>
+                <select id="ayudante" name="ayudante" required>
+                    <option value="" disabled selected>Seleccionar ayudante...</option>
+                    <option value="Gonzalez Denis">GONZALES DENIS</option>
+                    <option value="Sosa Dario">SOSA DARIO</option>
+                    <option value="Gimenez Claudio">GIMENEZ CLAUDIO</option>
+                    <option value="Rouret Raul">ROURET RAUL</option>
+                </select>
             </div>
             <div class="form-group">
                 <label for="solicitado">Solicitado por</label>
@@ -46,7 +79,28 @@
             <button type="submit" class="btn">Empezar</button>
         </form>
     </div>
+ <script>
+    document.getElementById('inicioForm').addEventListener('submit', (e) => {
+      e.preventDefault();
 
+      const intervencion = {
+        fecha: e.target.fecha.value,
+        cliente: e.target.cliente.value,
+        area: e.target.area.value,
+        pozo: e.target.pozo.value,
+        ot: e.target.ot.value,
+        operador: e.target.operador.value,
+        ayudante: e.target.ayudante.value,
+        solicitado: e.target.solicitado.value,
+        tuboActual: 1
+      };
+
+      localStorage.setItem('intervencionActual', JSON.stringify(intervencion));
+
+      // redirigimos a la primera pantalla del flujo
+      window.location.href = 'Corrosion.html';
+    });
+  </script>
   
 </body>
 </html>

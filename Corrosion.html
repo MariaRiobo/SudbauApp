@@ -16,10 +16,11 @@
         <div class="header-corrosion">
             <div class="header-left">
                 <img src="img/logo.png" alt="Logo de la empresa" class="logo">
-                <h1 class="title">CORROSIÓN</h1>
-            </div>
-            <div class="header-right">
-                <p>Botón Nº : <span id="contador">1</span></p>
+                 <div class="titulo-y-tubo">
+                    <h1 class="title">CORROSIÓN</h1>
+                    <!-- Acá mostramos Tubo #N en la segunda línea -->
+                    <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
+                  </div>            
             </div>
         </div>
 
@@ -49,6 +50,7 @@
     </div>
 
     <script>
+        
         // Funcionalidad para el contador y la lógica de los botones
         const contadorSpan = document.getElementById('contador');
         const justificacionContainer = document.querySelector('.justificacion-container');
@@ -68,8 +70,21 @@
         btnJustificar.addEventListener('click', () => {
             btnArranque.style.display = 'block';
         });
+
+        // Contador de tubo
+        const rawData = localStorage.getItem('intervencionActual');
+
+        if (!rawData) {
+            window.location.href = 'InicioSesion.html';
+        } else {
+            const intervencion = JSON.parse(rawData);
+            const numeroTubo = document.getElementById('numero-tubo');
+
+            if (numeroTubo) {
+            numeroTubo.textContent = intervencion.tuboActual;
+            }
+        }
     </script>
 
-  
 </body>
 </html>

@@ -19,9 +19,7 @@
             <div class="header-left">
                 <img src="img/logo.png" alt="Logo de la empresa" class="logo">
                 <h1 class="title">CUPLA</h1>
-            </div>
-            <div class="header-right">
-                <p>Botón Nº : <span id="contador">1</span></p>
+                <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
             </div>
         </div>
 
@@ -68,8 +66,44 @@
     <!-- Botón inferior -->
     <div class="controles">
       <a href="./tipo.html" class="btn-volver">Atrás</a>
+      <button id="btn-siguiente-tubo" class="btn">Siguiente tubo</button>
+    </div>
+    <div class="controles">
+      <button id="btn-finalizar" class="btn btn-danger">Finalizar inspección</button>
     </div>
 
   </div>
+<script>
+    // 1. Mostrar número de tubo actual
+    const rawData = localStorage.getItem('intervencionActual');
+
+    if (!rawData) {
+      window.location.href = 'InicioSesion.html';
+    } else {
+      const intervencion = JSON.parse(rawData);
+
+      // Mostrar Tubo Nº X en pantalla
+      const numeroTuboSpan = document.getElementById('numero-tubo');
+      if (numeroTuboSpan) {
+        numeroTuboSpan.textContent = intervencion.tuboActual;
+      }
+
+      // 2. Botón "Siguiente tubo" → incrementa contador y vuelve al inicio del loop
+      const btnSiguiente = document.getElementById('btn-siguiente-tubo');
+      btnSiguiente.addEventListener('click', () => {
+
+        intervencion.tuboActual = intervencion.tuboActual + 1;
+        localStorage.setItem('intervencionActual', JSON.stringify(intervencion));
+        window.location.href = 'Corrosion.html';
+      });
+    const btnFinalizar = document.getElementById('btn-finalizar');
+    btnFinalizar.addEventListener('click', () => {
+
+      localStorage.removeItem('intervencionActual');
+      window.location.href = 'InicioSesion.html';
+    });
+    }
+  </script>
+
 </body>
 </html>

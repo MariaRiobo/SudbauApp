@@ -59,17 +59,31 @@
         const fechaHoraSpan = document.getElementById('fecha-hora');
         const btnJustificar = document.querySelector('.btn-justificar');
 
+        // Seleccionar todos los botones de colores
+        const botonesColor = document.querySelectorAll('.btn-color');
+
         // Lógica del botón de parada
         btnParada.addEventListener('click', () => {
             const now = new Date();
             fechaHoraSpan.textContent = now.toLocaleString();
             justificacionContainer.style.display = 'block';
+             // Desactivar todos los botones de color
+            botonesColor.forEach(btn => {
+                btn.classList.add('desactivado');
+            });
         });
 
         // Lógica para mostrar el botón de arranque al justificar
         btnJustificar.addEventListener('click', () => {
             btnArranque.style.display = 'block';
+           // Reactivar todos los botones de color
+           botonesColor.forEach(btn => {
+                btn.classList.remove('desactivado');
+            });
+            
         });
+
+
 
         // Contador de tubo
         const rawData = localStorage.getItem('intervencionActual');

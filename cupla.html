@@ -4,106 +4,188 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tipo de Tubo</title>
+  <title>Cupla</title>
   <link rel="stylesheet" href="css/app.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    .tipo-btn.selected { outline: 3px solid rgba(0,85,170,.25); transform: translateY(1px); }
+    .tipo-btn.desactivado { pointer-events: none; filter: grayscale(100%); opacity: .5; }
 
+    .seleccion-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 10px 14px; border-radius: 10px; margin: 10px 0 8px;
+      background: #E9F3FF; font-family: 'Noto Sans', sans-serif; font-size: 14px;
+    }
+    .seleccion-banner[hidden]{ display:none; }
+    .seleccion-banner button {
+      background: transparent; border: 0; text-decoration: underline; cursor: pointer;
+      font-family: 'Kanit', sans-serif; font-size: 14px;
+    }
+
+    /*Estado deshabilitado visible*/
+    .btn:disabled,
+    .btn[disabled],
+    #btn-siguiente-tubo:disabled,
+    #btn-finalizar:disabled {
+      opacity: 0.5;
+      filter: grayscale(100%);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn:disabled:hover,
+    .btn:disabled:focus {
+      box-shadow: none;
+      outline: none;
+    }
+  </style>
 </head>
+
 <body>
   <div class="container container-large container-wide">
-
-    <!-- Header (igual criterio que Corrosión) -->
+    <!-- Header -->
     <div class="header-corrosion">
-            <div class="header-left">
-                <img src="img/logo.png" alt="Logo de la empresa" class="logo">
-                <h1 class="title">CUPLA</h1>
-                <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
-            </div>
+      <div class="header-left">
+        <img src="img/logo.png" alt="Logo de la empresa" class="logo">
+        <div class="titulo-y-tubo">
+          <h1 class="title">CUPLA</h1>
+          <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
         </div>
+      </div>
+    </div>
 
     <!-- Grilla -->
-  <div class="tipo-container">
-  <div class="tipo-item">
-    <a href="" class="tipo-btn">CO</a>
-    <p>Corrosión</p>
-  </div>
-  <div class="tipo-item">
-    <a href="" class="tipo-btn">DG</a>
-    <p>Desgaste general</p>
-  </div>
-  <div class="tipo-item">
-    <a href="" class="tipo-btn">DC</a>
-    <p>Desgaste cuña/contra</p>
-  </div>
-  <div class="tipo-item">
-    <a href="" class="tipo-btn">DP</a>
-    <p>Desgaste puntual</p>
-  </div>
-  <div class="tipo-item">
-    <a href="" class="tipo-btn">TR</a>
-    <p>Tubing roto</p>
-  </div>
-  <div class="tipo-item">
-    <a href="" class="tipo-btn">TT</a>
-    <p>Tubing torcido</p>
-  </div>
-  <div class="tipo-item">
-    <a href="" class="tipo-btn">TP</a>
-    <p>Tubing pinchado</p>
-  </div>
-  <div class="tipo-item">
-    <a href="" class="tipo-btn">RV</a>
-    <p>Rozamiento de varilla</p>
-  </div>
-  <div class="tipo-item tipo-span-2">
-    <a href="" class="tipo-btn">UG</a>
-    <p>Ungraded</p>
-  </div>
-</div>
+    <div class="tipo-container">
+      <div class="tipo-item"><a href="" class="tipo-btn" data-code="CO">CO</a><p>Corrosión</p></div>
+      <div class="tipo-item"><a href="" class="tipo-btn" data-code="DG">DG</a><p>Desgaste general</p></div>
+      <div class="tipo-item"><a href="" class="tipo-btn" data-code="DC">DC</a><p>Desgaste cuña/contra</p></div>
+      <div class="tipo-item"><a href="" class="tipo-btn" data-code="DP">DP</a><p>Desgaste puntual</p></div>
+      <div class="tipo-item"><a href="" class="tipo-btn" data-code="TR">TR</a><p>Tubing roto</p></div>
+      <div class="tipo-item"><a href="" class="tipo-btn" data-code="TT">TT</a><p>Tubing torcido</p></div>
+      <div class="tipo-item"><a href="" class="tipo-btn" data-code="TP">TP</a><p>Tubing pinchado</p></div>
+      <div class="tipo-item"><a href="" class="tipo-btn" data-code="RV">RV</a><p>Rozamiento de varilla</p></div>
+      <div class="tipo-item tipo-span-2"><a href="" class="tipo-btn" data-code="UG">UG</a><p>Ungraded</p></div>
+    </div>
 
-    <!-- Botón inferior -->
-    <div class="controles">
+    <div id="seleccion-banner" class="seleccion-banner" hidden aria-live="polite">
+      <span id="seleccion-texto"></span>
+      <button id="seleccion-cambiar" type="button">Cambiar</button>
+    </div>
+
+    <div class="controles" id="controles-cta">
       <a href="./tipo.html" class="btn-volver">Atrás</a>
-      <button id="btn-siguiente-tubo" class="btn">Siguiente tubo</button>
+      <button id="btn-siguiente-tubo" class="btn" disabled>Siguiente tubo</button>
     </div>
     <div class="controles">
-      <button id="btn-finalizar" class="btn btn-danger">Finalizar inspección</button>
+      <button id="btn-finalizar" class="btn btn-danger" disabled>Finalizar inspección</button>
     </div>
+   </div>
 
-  </div>
-<script>
-    // 1. Mostrar número de tubo actual
-    const rawData = localStorage.getItem('intervencionActual');
+    <script>
+    function loadIntervencion() {
+      const raw = localStorage.getItem('intervencionActual');
+      if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
+      const itv = JSON.parse(raw);
+      if (!itv.draft) itv.draft = {};
+      if (!itv.registros) itv.registros = [];
+      if (!itv.eventos) itv.eventos = [];
+      return itv;
+    }
+    function saveIntervencion(itv){ localStorage.setItem('intervencionActual', JSON.stringify(itv)); }
+    function setDraft(field, value){
+      const itv = loadIntervencion(); if (!itv) return;
+      if (value === undefined) delete itv.draft[field]; else itv.draft[field] = value;
+      saveIntervencion(itv);
+    }
+    function pushEvento(tipo, extra = {}) {
+      const itv = loadIntervencion(); if (!itv) return;
+      itv.eventos.push({ tipo, tubo: Number(itv.tuboActual), at: new Date().toISOString(), ...extra });
+      saveIntervencion(itv);
+    }
 
-    if (!rawData) {
-      window.location.href = 'InicioSesion.html';
-    } else {
-      const intervencion = JSON.parse(rawData);
+    function commitTubeAndIncrement(extra = {}) {
+      const itv = loadIntervencion(); if (!itv) return null;
+      const registro = {
+        tubo: Number(itv.tuboActual),
+        ...itv.draft,
+        ...extra,
+        timestampLocal: new Date().toISOString()
+      };
+      itv.registros.push(registro);
+      itv.tuboActual = Number(itv.tuboActual || 0) + 1;
+      itv.draft = {};
+      saveIntervencion(itv);
+      return registro;
+    }
 
-      // Mostrar Tubo Nº X en pantalla
-      const numeroTuboSpan = document.getElementById('numero-tubo');
-      if (numeroTuboSpan) {
-        numeroTuboSpan.textContent = intervencion.tuboActual;
-      }
+    const itvInit = loadIntervencion();
+    const tuboSpan = document.getElementById('numero-tubo');
+    if (itvInit && tuboSpan) tuboSpan.textContent = itvInit.tuboActual;
 
-      // 2. Botón "Siguiente tubo" → incrementa contador y vuelve al inicio del loop
-      const btnSiguiente = document.getElementById('btn-siguiente-tubo');
-      btnSiguiente.addEventListener('click', () => {
-
-        intervencion.tuboActual = intervencion.tuboActual + 1;
-        localStorage.setItem('intervencionActual', JSON.stringify(intervencion));
-        window.location.href = 'Corrosion.html';
-      });
+    const tipoBtns = document.querySelectorAll('.tipo-btn');
+    const btnSiguiente = document.getElementById('btn-siguiente-tubo');
     const btnFinalizar = document.getElementById('btn-finalizar');
-    btnFinalizar.addEventListener('click', () => {
+    const banner = document.getElementById('seleccion-banner');
+    const bannerTexto = document.getElementById('seleccion-texto');
+    const bannerCambiar = document.getElementById('seleccion-cambiar');
+    let seleccionActual = null;
 
+    btnSiguiente.disabled = true;
+    btnFinalizar.disabled = true;
+
+    tipoBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        seleccionActual = btn.dataset.code || btn.textContent.trim();
+
+        // Visual
+        tipoBtns.forEach(b => (b === btn) ? b.classList.add('selected') : b.classList.add('desactivado'));
+        btnSiguiente.disabled = false;
+        btnFinalizar.disabled = false;
+
+        bannerTexto.textContent = `Seleccionaste: ${seleccionActual}`;
+        banner.hidden = false;
+
+        // Guardado en draft + evento
+        setDraft('cupla', seleccionActual);
+        pushEvento('cuplaSeleccionada', { cupla: seleccionActual });
+
+        // Scroll a CTAs
+        const target = document.getElementById('controles-cta');
+        if (target) {
+          const y = target.getBoundingClientRect().top + window.pageYOffset - 80;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      });
+    });
+
+    bannerCambiar.addEventListener('click', () => {
+      seleccionActual = null;
+      tipoBtns.forEach(b => b.classList.remove('selected', 'desactivado'));
+      btnSiguiente.disabled = true;
+      btnFinalizar.disabled = true;
+      banner.hidden = true;
+      setDraft('cupla', undefined);
+    });
+
+    btnSiguiente.addEventListener('click', () => {
+      if (!seleccionActual) return;
+      const reg = commitTubeAndIncrement(); // {tubo, corrosionColor, desgasteColor, tipo, cupla, timestampLocal}
+      console.log('Registro consolidado:', reg);
+      window.location.href = 'Corrosion.html';
+    });
+
+    btnFinalizar.addEventListener('click', () => {
+      if (!seleccionActual) return;
+      const reg = commitTubeAndIncrement({ finForzado: true });
+      console.log('Registro final:', reg);
       localStorage.removeItem('intervencionActual');
       window.location.href = 'InicioSesion.html';
     });
-    }
-  </script>
-
-</body>
+   </script>
+ </body>
 </html>

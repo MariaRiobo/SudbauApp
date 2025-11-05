@@ -14,15 +14,16 @@
 <body>
   <div class="container container-large container-wide">
 
-    <!-- Header (igual criterio que Corrosión) -->
-    <div class="header-corrosion">
-            <div class="header-left">
-                <img src="img/logo.png" alt="Logo de la empresa" class="logo">
-                <h1 class="title">TIPO</h1>
-                <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
-            </div>
+     <div class="header-corrosion">
+      <div class="header-left">
+         <img src="img/logo.png" alt="Logo de la empresa" class="logo">
+         <div class="titulo-y-tubo">
+         <h1 class="title">TIPO</h1>
+        <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
+       </div>
+      </div>
+    </div>
 
-        </div>
 
     <!-- Grilla -->
   <div class="tipo-container">
@@ -72,23 +73,53 @@
   </div>
 
   <script>
+  /* ========= Helpers mínimos de storage ========= */
+  function loadIntervencion() {
+    const raw = localStorage.getItem('intervencionActual');
+    if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
+    const itv = JSON.parse(raw);
+    if (!itv.draft) itv.draft = {};       // borrador del tubo actual
+    if (!itv.eventos) itv.eventos = [];   // log de eventos (opcional)
+    return itv;
+  }
+  function saveIntervencion(itv){
+    localStorage.setItem('intervencionActual', JSON.stringify(itv));
+  }
+  function pushEvento(tipo, extra = {}) {
+    const itv = loadIntervencion(); if (!itv) return;
+    itv.eventos.push({
+      tipo,
+      tubo: Number(itv.tuboActual),
+      at: new Date().toISOString(),
+      ...extra
+    });
+    saveIntervencion(itv);
+  }
 
-        // Obtener datos guardados de la intervención
-        const rawData = localStorage.getItem('intervencionActual');
+  /* ========= Estado inicial: número de tubo ========= */
+  const itv = loadIntervencion();
+  if (itv) {
+    const numeroTuboSpan = document.getElementById('numero-tubo');
+    if (numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
+  }
 
-        if (!rawData) {
-            // Si alguien entró directo sin iniciar sesión/intervención, lo saco
-            window.location.href = 'InicioSesion.html';
-        } else {
-            const intervencion = JSON.parse(rawData);
+  /* ========= Guardar selección de TIPO y navegar ========= */
+  document.querySelectorAll('.tipo-btn').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const code = e.currentTarget.textContent.trim(); // CO, DG, DC, ...
+      const itv2 = loadIntervencion(); if (!itv2) return;
 
-            // Mostrar número de tubo en <span id="numero-tubo">
-            const numeroTuboSpan = document.getElementById('numero-tubo');
-            if (numeroTuboSpan) {
-            numeroTuboSpan.textContent = intervencion.tuboActual;
-            }
-        }  
-    </script>
+      itv2.draft.tipo = code;         // ✅ queda en draft
+      saveIntervencion(itv2);
+
+      pushEvento('tipoSeleccionado', { tipo: code }); // ✅ traza con timestamp
+
+      // navegar a Cupla
+      window.location.href = e.currentTarget.getAttribute('href'); // cupla.html
+    });
+  });
+</script>
 
 </body>
 </html>

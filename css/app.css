@@ -94,6 +94,7 @@ body {
 .header-left {
     display: flex;
     align-items: center;
+    gap:16px; 
 }
 
 .header-right {
@@ -110,7 +111,7 @@ body {
 
 .title {
     font-size: 1.6em;
-    font-weight: 600;
+    font-weight: 510;
     color: #0F0F14;
     margin: 0;
 }
@@ -223,7 +224,7 @@ body {
     justify-content: space-between;
     gap: 10px;
     margin-bottom: 15px;
-    margin-top: 150px;
+    margin-top: 25px;
 }
 
 .btn-volver, .btn-parada {
@@ -309,8 +310,8 @@ body {
   grid-template-columns: repeat(2, 1fr);
   column-gap: 15px;
   row-gap: 15px;
-  margin-top: 32px;
-  margin-bottom: 56px;
+  margin-top: 15px;
+  margin-bottom: 24px;
   justify-content: center;
   justify-items: center;
   align-items: start;
@@ -323,6 +324,22 @@ body {
   align-items: center;  
   text-align: center;
   }
+
+.titulo-y-tubo{
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.title{ margin:0; }
+
+.subtitulo-tubo{
+  margin:0;
+  font-size:16px;
+  color:#46465A;
+}
+
 
 .tipo-btn{
   display: flex;
@@ -365,9 +382,14 @@ body {
 
 
 
-
 /* Media Queries para diseño responsive (Desktop) */
 @media (max-width: 680px){
   .tipo-container{ grid-template-columns: 1fr; }
   .tipo-span-2{ grid-column: auto; max-width: none; }
+
+  .titulo-y-tubo{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
+  }
 }

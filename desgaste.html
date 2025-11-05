@@ -6,17 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>App Sudbau</title>
     <link rel="stylesheet" href="css/app.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+
 </head>
 <body>
     <div class="container">
         <div class="header-corrosion">
             <div class="header-left">
                 <img src="img/logo.png" alt="Logo de la empresa" class="logo">
+
+                <div class="titulo-y-tubo">
                 <h1 class="title">DESGASTE</h1>
                 <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
-
+                </div>
             </div>
         </div>
+
 
         <div class="botones-container">
             <a href="tipo.html" class="btn-color amarillo">Amarillo</a>
@@ -35,24 +42,59 @@
 
     </div>
 
-    <script>
+<script>
+  /* ========= Helpers mínimos de storage ========= */
+  function loadIntervencion() {
+    const raw = localStorage.getItem('intervencionActual');
+    if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
+    const itv = JSON.parse(raw);
+    if (!itv.draft) itv.draft = {};       // borrador del tubo actual
+    if (!itv.eventos) itv.eventos = [];   // log de eventos (opcional)
+    return itv;
+  }
+  function saveIntervencion(itv){
+    localStorage.setItem('intervencionActual', JSON.stringify(itv));
+  }
+  // 👉 Igual que en Corrosión: guardamos una traza con timestamp
+  function pushEvento(tipo, extra = {}) {
+    const itv = loadIntervencion(); if (!itv) return;
+    itv.eventos.push({
+      tipo, tubo: Number(itv.tuboActual),
+      at: new Date().toISOString(),
+      ...extra
+    });
+    saveIntervencion(itv);
+  }
 
-        // Obtener datos guardados de la intervención
-        const rawData = localStorage.getItem('intervencionActual');
+  /* ========= Estado inicial: número de tubo ========= */
+  const itv = loadIntervencion();
+  if (itv) {
+    const numeroTuboSpan = document.getElementById('numero-tubo');
+    if (numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
+  }
 
-        if (!rawData) {
-            // Si alguien entró directo sin iniciar sesión/intervención, lo saco
-            window.location.href = 'InicioSesion.html';
-        } else {
-            const intervencion = JSON.parse(rawData);
+  /* ========= Guardar selección de DESGASTE y navegar ========= */
+  document.querySelectorAll('.botones-container .btn-color').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
 
-            // Mostrar número de tubo en <span id="numero-tubo">
-            const numeroTuboSpan = document.getElementById('numero-tubo');
-            if (numeroTuboSpan) {
-            numeroTuboSpan.textContent = intervencion.tuboActual;
-            }
-        }  
-    </script>
+      // detectar color por clase (amarillo/azul/verde/rojo/blanco)
+      const clases = e.currentTarget.className.split(/\s+/);
+      const color = ['amarillo','azul','verde','rojo','blanco']
+        .find(c => clases.includes(c)) || 'desconocido';
+
+      const itv2 = loadIntervencion(); if (!itv2) return;
+      itv2.draft.desgasteColor = color;   // ✅ queda en draft
+      saveIntervencion(itv2);
+
+      // ✅ traza en eventos (así lo ves como en corrosión)
+      pushEvento('desgasteSeleccionado', { color });
+
+      // navegar a Tipo
+      window.location.href = e.currentTarget.getAttribute('href'); // tipo.html
+    });
+  });
+</script>
 
 </body>
 </html>

@@ -16,13 +16,13 @@
         <div class="header-corrosion">
             <div class="header-left">
                 <img src="img/logo.png" alt="Logo de la empresa" class="logo">
-                 <div class="titulo-y-tubo">
-                    <h1 class="title">CORROSIÓN</h1>
-                    <!-- Acá mostramos Tubo #N en la segunda línea -->
-                    <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
-                  </div>            
+                <div class="titulo-y-tubo">
+                <h1 class="title">CORROSIÓN</h1>
+                <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
+                </div>
             </div>
         </div>
+
 
         <div class="botones-container">
             <a href="desgaste.html" class="btn-color amarillo">Amarillo</a>
@@ -45,60 +45,97 @@
             <button class="btn-justificar">Justificar</button>
         </div>
 
-        <a href="desgaste.html" > <button class="btn-arranque" style="display: none;">Arranque</button></a>
+    <button class="btn-arranque" style="display:none;">Arranque</button>
 
     </div>
 
-    <script>
-        
-        // Funcionalidad para el contador y la lógica de los botones
-        const contadorSpan = document.getElementById('contador');
-        const justificacionContainer = document.querySelector('.justificacion-container');
-        const btnParada = document.querySelector('.btn-parada');
-        const btnArranque = document.querySelector('.btn-arranque');
-        const fechaHoraSpan = document.getElementById('fecha-hora');
-        const btnJustificar = document.querySelector('.btn-justificar');
+<script>
+    /* =====Local storage===== */
+    function loadIntervencion() {
+      const raw = localStorage.getItem('intervencionActual');
+      if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
+      const itv = JSON.parse(raw);
+      if (!itv.draft) itv.draft = {};
+      if (!itv.eventos) itv.eventos = [];
+      return itv;
+    }
+    function saveIntervencion(itv) {
+      localStorage.setItem('intervencionActual', JSON.stringify(itv));
+    }
+    function pushEvento(tipo, extra = {}) {
+      const itv = loadIntervencion(); if (!itv) return;
+      itv.eventos.push({
+        tipo, tubo: Number(itv.tuboActual),
+        at: new Date().toISOString(),
+        ...extra
+      });
+      saveIntervencion(itv);
+    }
 
-        // Seleccionar todos los botones de colores
-        const botonesColor = document.querySelectorAll('.btn-color');
+    const justificacionContainer = document.querySelector('.justificacion-container');
+    const btnParada = document.querySelector('.btn-parada');
+    const btnArranque = document.querySelector('.btn-arranque');
+    const fechaHoraSpan = document.getElementById('fecha-hora');
+    const btnJustificar = document.querySelector('.btn-justificar');
+    const botonesColor = document.querySelectorAll('.btn-color');
 
-        // Lógica del botón de parada
-        btnParada.addEventListener('click', () => {
-            const now = new Date();
-            fechaHoraSpan.textContent = now.toLocaleString();
-            justificacionContainer.style.display = 'block';
-             // Desactivar todos los botones de color
-            botonesColor.forEach(btn => {
-                btn.classList.add('desactivado');
-            });
-        });
+    // Mostrar número de tubo
+    const itv = loadIntervencion();
+    if (!itv) { /* ya redirigió */ } 
+    else {
+      const numeroTubo = document.getElementById('numero-tubo');
+      if (numeroTubo) numeroTubo.textContent = itv.tuboActual;
+    }
 
-        // Lógica para mostrar el botón de arranque al justificar
-        btnJustificar.addEventListener('click', () => {
-            btnArranque.style.display = 'block';
-           // Reactivar todos los botones de color
-           botonesColor.forEach(btn => {
-                btn.classList.remove('desactivado');
-            });
-            
-        });
+    /* =====Botón parada===== */
+    btnParada.addEventListener('click', () => {
+      const now = new Date();
+      fechaHoraSpan.textContent = now.toLocaleString();
+      justificacionContainer.style.display = 'block';
 
+      botonesColor.forEach(btn => btn.classList.add('desactivado'));
+      btnParada.disabled = true;
 
+      pushEvento('parada');
+    });
 
-        // Contador de tubo
-        const rawData = localStorage.getItem('intervencionActual');
+    // Botón JUSTIFICAR → sólo muestra ARRANQUE
+    btnJustificar.addEventListener('click', () => {
+      btnArranque.style.display = 'block';
+      // Log opcional con el texto
+      const txt = (document.getElementById('justificacion')?.value || '').trim();
+      pushEvento('justificacion', { texto: txt });
+    });
 
-        if (!rawData) {
-            window.location.href = 'InicioSesion.html';
-        } else {
-            const intervencion = JSON.parse(rawData);
-            const numeroTubo = document.getElementById('numero-tubo');
+    btnArranque.addEventListener('click', () => {
+      botonesColor.forEach(btn => btn.classList.remove('desactivado'));
+      justificacionContainer.style.display = 'none';
+      btnArranque.style.display = 'none';
+      btnParada.disabled = false;
 
-            if (numeroTubo) {
-            numeroTubo.textContent = intervencion.tuboActual;
-            }
-        }
-    </script>
+      pushEvento('arranque');
+    });
+
+    /* =====Local storage===== */
+    document.querySelectorAll('.botones-container .btn-color').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Detectar color por clase
+        const cls = e.currentTarget.className.split(/\s+/);
+        const color = ['amarillo','azul','verde','rojo','blanco'].find(c => cls.includes(c)) || 'desconocido';
+
+        const itv2 = loadIntervencion(); if (!itv2) return;
+        itv2.draft.corrosionColor = color;   // 👈 queda guardado para este tubo
+        saveIntervencion(itv2);
+
+        // (Opcional) log simple
+        pushEvento('corrosionSeleccionada', { color });
+
+        // Ir a la siguiente pantalla como siempre
+        window.location.href = e.currentTarget.getAttribute('href'); // desgaste.html
+      });
+    });
+  </script>
 
 </body>
 </html>

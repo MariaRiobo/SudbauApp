@@ -1,147 +1,198 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inicia Sesión</title>
-    <link rel="stylesheet" href="css/app.css">
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inicia Sesión</title>
+  <link rel="stylesheet" href="css/app.css" />
+  <style>
+    /* Solo para que se vea prolijo el bloque de Pozo */
+    .pozo-wrap{ display:flex; align-items:center; gap:8px; }
+    .pozo-wrap input{ text-align:center; }
+    #pozo_letras{ width:60px; text-transform:uppercase; }
+    #pozo_num{ width:80px; }
+    .hint{ color:#FF6400; font-size:13px; }
+  </style>
 </head>
 <body>
-    <div class="container">
-       <div class="header header-login">
-         <img src="img/logoHorizontal.png" alt="Logo de la empresa" class="logo">
-         <h1 class="title">Iniciar sesión</h1>
-       </div>
-
-        <form  class="formulario" id="inicioForm">
-            <div class="form-group">
-                <label for="fecha">Fecha de intervención</label>
-                <input type="date" id="fecha" name="fecha" required>
-            </div>
-            <div class="form-group">
-                <label for="cliente">Cliente</label>
-                <select id="cliente" name="cliente" required>
-                    <option value="" disabled selected>Seleccionar cliente...</option>
-                    <option value="Paesa">PAESA</option>
-                    <option value="Paesa Mendoza">PAESA MENDOZA</option>
-                    <option value="PCR">PCR</option>
-                    <option value="OILSTONE">OILSTONE</option>
-                    <option value="SHELL">SHELL</option>
-                    <option value="president petroleum">PRESIDENT PETROLEUM</option>
-                    <option value="vista & oil">VISTA&OIL</option>
-                    <option value="YPF">YPF</option>
-                    <option value="Madalena Energy">MADALENA ENERGY</option>
-                    <option value="Pecom">PECOM</option>
-                    <option value="cgc">CGC</option>
-                    <option value="capsa">CAPSA</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="area">Área</label>
-                <input type="text" id="area" name="area" required>
-            </div>
-            <div class="form-group">
-                <label for="pozo">Pozo</label>
-                <input type="text" id="pozo" name="pozo" required>
-            </div>
-            <div class="form-group">
-                <label for="ot">OT no</label>
-                <input type="text" id="ot" name="ot" required>
-            </div>
-            <div class="form-group">
-                <label for="operador">Operador</label>
-                <select id="operador" name="operador" required>
-                    <option value="" disabled selected>Seleccionar operador...</option>
-                    <option value="Rivas Martín">RIVAS MARTÍN</option>
-                    <option value="Sapuri Cristian">SAPURI CRISTIAN</option>
-                    <option value="Marino Leandro">MARINO LEANDRO</option>
-                    <option value="Luzon Walter">LUZON WALTER</option>
-                    <option value="Cabeza Gastón">CABEZA GASTÓN</option>
-                    <option value="Vasquez Osvaldo">VASQUEZ OSVALDO</option>
-                    <option value="Sapuri Arturo">SAPURI ARTURO</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="ayudante">Ayudante</label>
-                <select id="ayudante" name="ayudante" required>
-                    <option value="" disabled selected>Seleccionar ayudante...</option>
-                    <option value="Gonzalez Denis">GONZALES DENIS</option>
-                    <option value="Sosa Dario">SOSA DARIO</option>
-                    <option value="Gimenez Claudio">GIMENEZ CLAUDIO</option>
-                    <option value="Rouret Raul">ROURET RAUL</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="solicitado">Solicitado por</label>
-                <input type="text" id="solicitado" name="solicitado" required>
-            </div>
-            <button type="submit" class="btn">Empezar</button>
-        </form>
+  <div class="container">
+    <div class="header header-login">
+      <img src="img/logoHorizontal.png" alt="Logo de la empresa" class="logo" />
+      <h1 class="title">Iniciar sesión</h1>
     </div>
 
- <script>
-    
-    // --- CÓDIGO AÑADIDO PARA VALIDACIONES ---
+    <form class="formulario" id="inicioForm">
+      <div class="form-group">
+        <label for="fecha">Fecha de intervención</label>
+        <input type="date" id="fecha" name="fecha" required />
+      </div>
+
+      <div class="form-group">
+        <label for="cliente">Cliente</label>
+        <select id="cliente" name="cliente" required>
+          <option value="" disabled selected>Seleccionar cliente...</option>
+          <option value="Paesa">PAESA</option>
+          <option value="Paesa Mendoza">PAESA MENDOZA</option>
+          <option value="PCR">PCR</option>
+          <option value="OILSTONE">OILSTONE</option>
+          <option value="SHELL">SHELL</option>
+          <option value="president petroleum">PRESIDENT PETROLEUM</option>
+          <option value="vista & oil">VISTA&OIL</option>
+          <option value="YPF">YPF</option>
+          <option value="Madalena Energy">MADALENA ENERGY</option>
+          <option value="Pecom">PECOM</option>
+          <option value="cgc">CGC</option>
+          <option value="capsa">CAPSA</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="area">Área</label>
+        <input type="text" id="area" name="area" required />
+      </div>
+
+      <div class="form-group">
+        <label for="pozo_letras">Pozo</label>
+        <div class="pozo-wrap">
+          <input id="pozo_letras" name="pozo_letras"
+                 placeholder="AA"
+                 pattern="[A-Za-z]{2}"
+                 maxlength="2"
+                 autocomplete="off"
+                 inputmode="latin"
+                 required />
+          <span aria-hidden="true">-</span>
+          <input id="pozo_num" name="pozo_num"
+                 placeholder="1234"
+                 pattern="[0-9]{4}"
+                 maxlength="4"
+                 autocomplete="off"
+                 inputmode="numeric"
+                 required />
+        </div>
+        <input type="hidden" id="pozo" name="pozo" />
+      </div>
+
+      <div class="form-group">
+        <label for="ot">OT no</label>
+        <input type="text" id="ot" name="ot" required />
+      </div>
+
+      <div class="form-group">
+        <label for="operador">Operador</label>
+        <select id="operador" name="operador" required>
+          <option value="" disabled selected>Seleccionar operador...</option>
+          <option value="Sapuri Cristian">SAPURI CRISTIAN</option>
+          <option value="Marino Leandro">MARINO LEANDRO</option>
+          <option value="Luzon Walter">LUZON WALTER</option>
+          <option value="Cabeza Gastón">CABEZA GASTÓN</option>
+          <option value="Vasquez Osvaldo">VASQUEZ OSVALDO</option>
+          <option value="Sapuri Arturo">SAPURI ARTURO</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="ayudante">Ayudante</label>
+        <select id="ayudante" name="ayudante" required>
+          <option value="" disabled selected>Seleccionar ayudante...</option>
+          <option value="Gonzalez Denis">GONZALES DENIS</option>
+          <option value="Sosa Dario">SOSA DARIO</option>
+          <option value="Gimenez Claudio">GIMENEZ CLAUDIO</option>
+          <option value="Rouret Raul">ROURET RAUL</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="solicitado">Solicitado por</label>
+        <input type="text" id="solicitado" name="solicitado" required />
+      </div>
+
+      <button type="submit" class="btn">Empezar</button>
+    </form>
+  </div>
+
+  <script>
+    // --- Configuración inicial y validaciones ligeras ---
     document.addEventListener('DOMContentLoaded', () => {
+      // 1) Fecha: hoy por defecto y sin futuras
+      const fechaInput = document.getElementById('fecha');
+      const today = new Date().toISOString().split('T')[0];
+      fechaInput.value = today;
+      fechaInput.setAttribute('max', today);
 
-        // --- 1. Validación de Fecha ---
-        const fechaInput = document.getElementById('fecha');
-        // Obtenemos la fecha de hoy en formato YYYY-MM-DD
-        const today = new Date().toISOString().split('T')[0];
-        // Asignamos la fecha de hoy como valor por defecto
-        fechaInput.value = today;
-        // Evitamos que se pueda seleccionar una fecha futura
-        fechaInput.setAttribute('max', today);
+      // 2) Selección de campos
+      const areaInput = document.getElementById('area');
+      const otInput = document.getElementById('ot');
+      const solicitadoInput = document.getElementById('solicitado');
 
+      // Área -> Solo letras A-Z, en mayúsculas
+      areaInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+      });
 
-        // --- 2. Selección de campos para validar ---
-        const areaInput = document.getElementById('area');
-        const pozoInput = document.getElementById('pozo');
-        const otInput = document.getElementById('ot');
-        const solicitadoInput = document.getElementById('solicitado');
+      // OT -> Solo dígitos
+      otInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+      });
 
-        
-        // --- 3. Aplicación de Reglas (Mayúsculas y Restricciones) ---
+      // Solicitado por -> Letras y espacios, en mayúsculas
+      solicitadoInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z\s]/g, '');
+      });
 
-        // Regla: Área -> Solo Letras (A-Z) y Mayúsculas
-        areaInput.addEventListener('input', (e) => {
-            // Convierte a mayúsculas y reemplaza cualquier cosa que NO sea A-Z
-            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
-        });
+      // --- Pozo en dos partes ---
+      const pozoL = document.getElementById('pozo_letras');
+      const pozoN = document.getElementById('pozo_num');
 
-        // Regla: Pozo -> Solo Letras (A-Z) y Mayúsculas
-        pozoInput.addEventListener('input', (e) => {
-            // Convierte a mayúsculas y reemplaza cualquier cosa que NO sea A-Z
-            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
-        });
+      // Letras: mayúsculas + sólo A-Z, autoadelanto al completar 2
+      pozoL.addEventListener('input', (e) => {
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0,2);
+        if (e.target.value.length === 2) pozoN.focus();
+      });
 
-        // Regla: OT -> Solo Números (0-9)
-        otInput.addEventListener('input', (e) => {
-            // Reemplaza cualquier cosa que NO sea un dígito (0-9)
-            e.target.value = e.target.value.replace(/[^0-9]/g, '');
-        });
+      // Números: sólo 0-9, máximo 4
+      pozoN.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0,4);
+      });
 
-        // Regla: Solicitado por -> Letras (A-Z), Espacios y Mayúsculas
-        solicitadoInput.addEventListener('input', (e) => {
-            // Convierte a mayúsculas y reemplaza lo que NO sea A-Z o un espacio (\s)
-            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z\s]/g, '');
-        });
-
+      // Permitir pegar "AB-1234" o "AB1234" en cualquiera de los dos
+      function handlePasteNormalize(evt){
+        const text = (evt.clipboardData || window.clipboardData).getData('text') || '';
+        const cleaned = text.toUpperCase().replace(/[^A-Z0-9-]/g,'');
+        const m = cleaned.match(/^([A-Z]{2})-?([0-9]{4})$/);
+        if (m){
+          evt.preventDefault();
+          pozoL.value = m[1];
+          pozoN.value = m[2];
+          pozoN.focus();
+        }
+      }
+      pozoL.addEventListener('paste', handlePasteNormalize);
+      pozoN.addEventListener('paste', handlePasteNormalize);
     });
-    // --- FIN DEL CÓDIGO DE VALIDACIONES ---
 
-
-    // Lógica existente para guardar en localStorage
+    // --- Envío y guardado ---
     document.getElementById('inicioForm').addEventListener('submit', (e) => {
+      // Dejar que el navegador valide cada parte por pattern
+      if (!e.target.checkValidity()){
+        // Si hay error nativo de HTML5, dejamos que lo muestre y no prevenimos
+        return;
+      }
+
       e.preventDefault();
+
+      // Armar "pozo" final: AA-1234
+      const letras = (document.getElementById('pozo_letras').value || '').toUpperCase();
+      const nums   = (document.getElementById('pozo_num').value || '');
+      const pozoValue = `${letras}-${nums}`;
+      document.getElementById('pozo').value = pozoValue;
 
       const intervencion = {
         fecha: e.target.fecha.value,
         cliente: e.target.cliente.value,
-        // Los valores ya se guardan validados y en mayúsculas
-        area: e.target.area.value, 
-        pozo: e.target.pozo.value,
+        area: e.target.area.value,
+        pozo: pozoValue,                 // << AB-1234
         ot: e.target.ot.value,
         operador: e.target.operador.value,
         ayudante: e.target.ayudante.value,
@@ -150,11 +201,8 @@
       };
 
       localStorage.setItem('intervencionActual', JSON.stringify(intervencion));
-
-      // redirigimos a la primera pantalla del flujo
       window.location.href = 'Corrosion.html';
     });
- </script>
-  
+  </script>
 </body>
 </html>

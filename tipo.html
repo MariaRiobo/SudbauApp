@@ -18,14 +18,13 @@
       <div class="header-left">
          <img src="img/logo.png" alt="Logo de la empresa" class="logo">
          <div class="titulo-y-tubo">
+         <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
          <h1 class="title">TIPO</h1>
-        <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
        </div>
       </div>
     </div>
 
 
-    <!-- Grilla -->
   <div class="tipo-container">
   <div class="tipo-item">
     <a href="./cupla.html" class="tipo-btn">CO</a>
@@ -65,7 +64,6 @@
   </div>
 </div>
 
-    <!-- Botón inferior -->
     <div class="controles">
       <a href="./desgaste.html" class="btn-volver">Atrás</a>
     </div>
@@ -73,7 +71,6 @@
   </div>
 
   <script>
-  /* ========= Helpers mínimos de storage ========= */
   function loadIntervencion() {
     const raw = localStorage.getItem('intervencionActual');
     if (!raw) { window.location.href = 'InicioSesion.html'; return null; }

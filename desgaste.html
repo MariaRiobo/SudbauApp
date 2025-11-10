@@ -16,21 +16,20 @@
         <div class="header-corrosion">
             <div class="header-left">
                 <img src="img/logo.png" alt="Logo de la empresa" class="logo">
-
                 <div class="titulo-y-tubo">
-                <h1 class="title">DESGASTE</h1>
                 <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
+                <h1 class="title">DESGASTE</h1>
                 </div>
             </div>
         </div>
 
 
         <div class="botones-container">
-            <a href="tipo.html" class="btn-color amarillo">Amarillo</a>
-            <a href="tipo.html" class="btn-color azul">Azul</a>
-            <a href="tipo.html" class="btn-color verde">Verde</a>
-            <a href="tipo.html" class="btn-color rojo">Rojo</a>
-            <a href="tipo.html" class="btn-color blanco">Blanco</a>
+            <a href="tipo.html" class="btn-color amarillo">G2</a>
+            <a href="tipo.html" class="btn-color azul">G3</a>
+            <a href="tipo.html" class="btn-color verde">G4</a>
+            <a href="tipo.html" class="btn-color rojo">G5</a>
+            <a href="tipo.html" class="btn-color blanco">UNGRADE</a>
         </div>
         
 
@@ -43,19 +42,17 @@
     </div>
 
 <script>
-  /* ========= Helpers mínimos de storage ========= */
   function loadIntervencion() {
     const raw = localStorage.getItem('intervencionActual');
     if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
     const itv = JSON.parse(raw);
-    if (!itv.draft) itv.draft = {};       // borrador del tubo actual
-    if (!itv.eventos) itv.eventos = [];   // log de eventos (opcional)
+    if (!itv.draft) itv.draft = {};
+    if (!itv.eventos) itv.eventos = [];
     return itv;
   }
   function saveIntervencion(itv){
     localStorage.setItem('intervencionActual', JSON.stringify(itv));
   }
-  // 👉 Igual que en Corrosión: guardamos una traza con timestamp
   function pushEvento(tipo, extra = {}) {
     const itv = loadIntervencion(); if (!itv) return;
     itv.eventos.push({

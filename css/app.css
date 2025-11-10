@@ -176,7 +176,7 @@ body {
 }
 .btn-color {
     padding: 35px 20px;
-    font-size: 0.85rem; 
+    font-size: 20px; 
     font-weight: 700;
     text-transform: uppercase;
     text-decoration: none;      
@@ -335,9 +335,12 @@ body {
 .title{ margin:0; }
 
 .subtitulo-tubo{
-  margin:0;
-  font-size:16px;
-  color:#46465A;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #46465A;
+  font-family: "Noto Sans", sans-serif;
+  letter-spacing: 0.5px; 
 }
 
 

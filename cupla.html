@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-  
   <style>
     .tipo-btn.selected { outline: 3px solid rgba(0,85,170,.25); transform: translateY(1px); }
     .tipo-btn.desactivado { pointer-events: none; filter: grayscale(100%); opacity: .5; }
@@ -25,7 +24,7 @@
       font-family: 'Kanit', sans-serif; font-size: 14px;
     }
 
-    /*Estado deshabilitado visible*/
+    /* Estado deshabilitado visible */
     .btn:disabled,
     .btn[disabled],
     #btn-siguiente-tubo:disabled,
@@ -36,12 +35,8 @@
       box-shadow: none;
       transform: none;
     }
-
     .btn:disabled:hover,
-    .btn:disabled:focus {
-      box-shadow: none;
-      outline: none;
-    }
+    .btn:disabled:focus { box-shadow: none; outline: none; }
   </style>
 </head>
 
@@ -58,19 +53,16 @@
       </div>
     </div>
 
-    <!-- Grilla -->
+    <!-- SOLO dos opciones: Buena / Defectuosa -->
     <div class="tipo-container">
-      <div class="tipo-item"><a href="" class="tipo-btn" data-code="CO">CO</a><p>Corrosión</p></div>
-      <div class="tipo-item"><a href="" class="tipo-btn" data-code="DG">DG</a><p>Desgaste general</p></div>
-      <div class="tipo-item"><a href="" class="tipo-btn" data-code="DC">DC</a><p>Desgaste cuña/contra</p></div>
-      <div class="tipo-item"><a href="" class="tipo-btn" data-code="DP">DP</a><p>Desgaste puntual</p></div>
-      <div class="tipo-item"><a href="" class="tipo-btn" data-code="TR">TR</a><p>Tubing roto</p></div>
-      <div class="tipo-item"><a href="" class="tipo-btn" data-code="TT">TT</a><p>Tubing torcido</p></div>
-      <div class="tipo-item"><a href="" class="tipo-btn" data-code="TP">TP</a><p>Tubing pinchado</p></div>
-      <div class="tipo-item"><a href="" class="tipo-btn" data-code="RV">RV</a><p>Rozamiento de varilla</p></div>
-      <div class="tipo-item tipo-span-2"><a href="" class="tipo-btn" data-code="UG">UG</a><p>Ungraded</p></div>
-      <div class="tipo-item tipo-span-2"><a href="" class="tipo-btn" data-code="NORMAL">NORMAL</a><p></p></div>
-
+      <div class="tipo-item">
+        <a href="" class="tipo-btn" data-code="buena">BUENA</a>
+        <p>Cupla buena</p>
+      </div>
+      <div class="tipo-item">
+        <a href="" class="tipo-btn" data-code="defectuosa">DEFECTUOSA</a>
+        <p>Cupla defectuosa</p>
+      </div>
     </div>
 
     <div id="seleccion-banner" class="seleccion-banner" hidden aria-live="polite">
@@ -85,9 +77,10 @@
     <div class="controles">
       <button id="btn-finalizar" class="btn btn-danger" disabled>Finalizar inspección</button>
     </div>
-   </div>
+  </div>
 
-    <script>
+  <script>
+    /* ===== Helpers de estado ===== */
     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
       if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
@@ -109,21 +102,25 @@
       saveIntervencion(itv);
     }
 
+    // Consolida registro del tubo, incrementa contador y limpia draft
     function commitTubeAndIncrement(extra = {}) {
       const itv = loadIntervencion(); if (!itv) return null;
+
       const registro = {
         tubo: Number(itv.tuboActual),
-        ...itv.draft,
-        ...extra,
+        ...itv.draft,          // debería contener: desgasteColor, corrosionColor, tipo
+        ...extra,              // acá entra cupla_status u otros campos finales
         timestampLocal: new Date().toISOString()
       };
+
       itv.registros.push(registro);
       itv.tuboActual = Number(itv.tuboActual || 0) + 1;
-      itv.draft = {};
+      itv.draft = {}; // limpiar para el próximo tubo
       saveIntervencion(itv);
       return registro;
     }
 
+    /* ===== UI init ===== */
     const itvInit = loadIntervencion();
     const tuboSpan = document.getElementById('numero-tubo');
     if (itvInit && tuboSpan) tuboSpan.textContent = itvInit.tuboActual;
@@ -134,27 +131,33 @@
     const banner = document.getElementById('seleccion-banner');
     const bannerTexto = document.getElementById('seleccion-texto');
     const bannerCambiar = document.getElementById('seleccion-cambiar');
+
     let seleccionActual = null;
 
     btnSiguiente.disabled = true;
     btnFinalizar.disabled = true;
 
+    // Click en BUENA / DEFECTUOSA
     tipoBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        seleccionActual = btn.dataset.code || btn.textContent.trim();
+        seleccionActual = btn.dataset.code; // 'buena' o 'defectuosa'
 
-        // Visual
+        // Visual: resaltar selección y desactivar la otra
         tipoBtns.forEach(b => (b === btn) ? b.classList.add('selected') : b.classList.add('desactivado'));
+
+        // Habilitar CTAs
         btnSiguiente.disabled = false;
         btnFinalizar.disabled = false;
 
-        bannerTexto.textContent = `Seleccionaste: ${seleccionActual}`;
+        // Banner de confirmación
+        const textoHumano = (seleccionActual === 'buena') ? 'CUPLA BUENA' : 'CUPLA DEFECTUOSA';
+        bannerTexto.textContent = `Seleccionaste: ${textoHumano}`;
         banner.hidden = false;
 
         // Guardado en draft + evento
-        setDraft('cupla', seleccionActual);
-        pushEvento('cuplaSeleccionada', { cupla: seleccionActual });
+        setDraft('cupla_status', seleccionActual);
+        pushEvento('cuplaSeleccionada', { cupla_status: seleccionActual });
 
         // Scroll a CTAs
         const target = document.getElementById('controles-cta');
@@ -165,29 +168,38 @@
       });
     });
 
+    // Cambiar la selección
     bannerCambiar.addEventListener('click', () => {
       seleccionActual = null;
       tipoBtns.forEach(b => b.classList.remove('selected', 'desactivado'));
       btnSiguiente.disabled = true;
       btnFinalizar.disabled = true;
       banner.hidden = true;
-      setDraft('cupla', undefined);
+      setDraft('cupla_status', undefined);
     });
 
+    // Siguiente tubo → consolidar, incrementar y volver a DESGASTE
     btnSiguiente.addEventListener('click', () => {
       if (!seleccionActual) return;
-      const reg = commitTubeAndIncrement(); // {tubo, corrosionColor, desgasteColor, tipo, cupla, timestampLocal}
+
+      // Evento de cierre del tubo actual (opcional pero útil para auditoría)
+      pushEvento('tuboCerrado', { cupla_status: seleccionActual });
+
+      const reg = commitTubeAndIncrement({ cupla_status: seleccionActual });
       console.log('Registro consolidado:', reg);
-      window.location.href = 'Corrosion.html';
+
+      // Arranca siguiente tubo en DESGASTE
+      window.location.href = 'Desgaste.html';
     });
 
+    // Finalizar inspección
     btnFinalizar.addEventListener('click', () => {
       if (!seleccionActual) return;
-      const reg = commitTubeAndIncrement({ finForzado: true });
+      const reg = commitTubeAndIncrement({ cupla_status: seleccionActual, finForzado: true });
       console.log('Registro final:', reg);
       localStorage.removeItem('intervencionActual');
       window.location.href = 'InicioSesion.html';
     });
-   </script>
- </body>
+  </script>
+</body>
 </html>

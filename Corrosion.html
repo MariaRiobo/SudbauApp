@@ -9,39 +9,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    /* Opcional: aspecto de desactivado para anchors/botones */
-    .desactivado, .desactivado:focus, .desactivado:hover {
-      pointer-events: none;
-      opacity: .5;
-      cursor: not-allowed !important;
-      filter: grayscale(20%);
-    }
-    .justificacion-container{
-      margin-top: 16px;
-      padding: 12px;
-      border: 1px solid #CDCDDC;
-      border-radius: 10px;
-      background: #fff;
-    }
-    .justificacion-container textarea{
-      width: 100%;
-      min-height: 96px;
-      padding: 10px 12px;
-      border: 1px solid #0055AA;
-      border-radius: 10px;
-      font-family: "Noto Sans", sans-serif;
-      font-size: 14px;
-      resize: vertical;
-      text-transform: uppercase; /* visual en mayúsculas */
-    }
-    .btn-justificar:disabled{
-      opacity: .5;
-      cursor: not-allowed;
-      box-shadow: none;
-      transform: none;
-    }
-  </style>
 </head>
 <body>
   <div class="container">
@@ -56,30 +23,20 @@
     </div>
 
     <div class="botones-container">
-      <a href="desgaste.html" class="btn-color amarillo">G2</a>
-      <a href="desgaste.html" class="btn-color azul">G3</a>
-      <a href="desgaste.html" class="btn-color verde">G4</a>
-      <a href="desgaste.html" class="btn-color rojo">G5</a>
-      <a href="desgaste.html" class="btn-color blanco">UNGRADE</a>
+      <a href="tipo.html" class="btn-color amarillo">G2</a>
+      <a href="tipo.html" class="btn-color azul">G3</a>
+      <a href="tipo.html" class="btn-color verde">G4</a>
+      <a href="tipo.html" class="btn-color rojo">G5</a>
+      <a href="tipo.html" class="btn-color blanco">UNGRADE</a>
     </div>
 
     <div class="controles">
-      <a href="InicioSesion.html" class="btn-volver">Volver</a>
-      <button class="btn-parada">Parada</button>
+      <a href="Desgaste.html" class="btn-volver">Volver</a>
     </div>
-
-    <div class="justificacion-container" style="display:none;">
-      <p>Fecha y hora: <span id="fecha-hora"></span></p>
-      <label for="justificacion">Justificación:</label>
-      <textarea id="justificacion" rows="4" placeholder="DETALLAR MOTIVO DE PARADA"></textarea>
-      <button class="btn-justificar" disabled>Justificar</button>
-    </div>
-
-    <button class="btn-arranque" style="display:none;">Arranque</button>
   </div>
 
   <script>
-    /* =====Local storage===== */
+    /* ===== Local storage ===== */
     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
       if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
@@ -101,94 +58,18 @@
       saveIntervencion(itv);
     }
 
-    const justificacionContainer = document.querySelector('.justificacion-container');
-    const btnParada = document.querySelector('.btn-parada');
-    const btnArranque = document.querySelector('.btn-arranque');
-    const fechaHoraSpan = document.getElementById('fecha-hora');
-    const btnJustificar = document.querySelector('.btn-justificar');
-    const botonesColor = document.querySelectorAll('.btn-color');
-    const btnVolver = document.querySelector('.btn-volver');
-    const txtJustificacion = document.getElementById('justificacion');
-
     // Mostrar número de tubo
     const itv = loadIntervencion();
-    if (!itv) { /* ya redirigió */ } 
-    else {
+    if (itv) {
       const numeroTubo = document.getElementById('numero-tubo');
       if (numeroTubo) numeroTubo.textContent = itv.tuboActual;
     }
 
-    /* ===== Estado Parada ===== */
-    btnParada.addEventListener('click', () => {
-      const now = new Date();
-      fechaHoraSpan.textContent = now.toLocaleString();
-      justificacionContainer.style.display = 'block';
-
-      // Desactivar botones de color y volver
-      botonesColor.forEach(btn => btn.classList.add('desactivado'));
-      btnVolver.classList.add('desactivado');
-      btnVolver.setAttribute('aria-disabled', 'true');
-
-      // Desactivar botón Parada (ya está parado)
-      btnParada.disabled = true;
-
-      // “Justificar” siempre inicia deshabilitado hasta que haya texto
-      btnJustificar.disabled = true;
-
-      pushEvento('parada');
-    });
-
-    // Evitar navegación en "Volver" cuando esté desactivado
-    btnVolver.addEventListener('click', (e) => {
-      if (btnVolver.classList.contains('desactivado')) e.preventDefault();
-    });
-
-    // Uppercase en vivo + habilitar/deshabilitar “Justificar”
-    txtJustificacion.addEventListener('input', (e) => {
-      const upper = e.target.value.toUpperCase();
-      if (e.target.value !== upper) {
-        const selStart = e.target.selectionStart;
-        const selEnd = e.target.selectionEnd;
-        e.target.value = upper;
-        // restaurar selección para que no “salte” el cursor
-        e.target.setSelectionRange(selStart, selEnd);
-      }
-      // Habilitar solo si hay contenido no vacío
-      btnJustificar.disabled = upper.trim().length === 0;
-    });
-
-    // Botón JUSTIFICAR → solo si hay texto (no vacío)
-    btnJustificar.addEventListener('click', () => {
-      const txt = (txtJustificacion.value || '').trim().toUpperCase();
-      if (txt.length === 0) return; // extra-guardia
-
-      btnArranque.style.display = 'block';
-      pushEvento('justificacion', { texto: txt });
-    });
-
-    // ARRANQUE → volver a habilitar todo y limpiar
-    btnArranque.addEventListener('click', () => {
-      botonesColor.forEach(btn => btn.classList.remove('desactivado'));
-      btnVolver.classList.remove('desactivado');
-      btnVolver.removeAttribute('aria-disabled');
-
-      justificacionContainer.style.display = 'none';
-      btnArranque.style.display = 'none';
-      btnParada.disabled = false;
-
-      // limpiar textarea y volver a deshabilitar "Justificar"
-      txtJustificacion.value = '';
-      btnJustificar.disabled = true;
-
-      pushEvento('arranque');
-    });
-
     /* ===== Selección de color → guarda draft y navega ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
       a.addEventListener('click', (e) => {
-        if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
-
         e.preventDefault();
+
         // Detectar color por clase
         const cls = e.currentTarget.className.split(/\s+/);
         const color = ['amarillo','azul','verde','rojo','blanco'].find(c => cls.includes(c)) || 'desconocido';
@@ -199,7 +80,8 @@
 
         pushEvento('corrosionSeleccionada', { color });
 
-        window.location.href = e.currentTarget.getAttribute('href'); // desgaste.html
+        // Navegar a tipo.html (tomado del href)
+        window.location.href = e.currentTarget.getAttribute('href');
       });
     });
   </script>

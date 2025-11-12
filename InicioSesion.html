@@ -7,12 +7,13 @@
   <title>Inicia Sesión</title>
   <link rel="stylesheet" href="css/app.css" />
   <style>
-    /* Solo para que se vea prolijo el bloque de Pozo */
     .pozo-wrap{ display:flex; align-items:center; gap:8px; }
     .pozo-wrap input{ text-align:center; }
-    #pozo_letras{ width:60px; text-transform:uppercase; }
+    #pozo_letras{ width:80px; text-transform:uppercase; }
     #pozo_num{ width:80px; }
-    .hint{ color:#FF6400; font-size:13px; }
+    .hint{ color:#05145A; font-size:13px; }
+    .header-login .logo{ max-height:48px; }
+    .btn{ cursor:pointer; }
   </style>
 </head>
 <body>
@@ -22,7 +23,7 @@
       <h1 class="title">Iniciar sesión</h1>
     </div>
 
-    <form class="formulario" id="inicioForm">
+    <form class="formulario" id="inicioForm" novalidate>
       <div class="form-group">
         <label for="fecha">Fecha de intervención</label>
         <input type="date" id="fecha" name="fecha" required />
@@ -55,22 +56,28 @@
       <div class="form-group">
         <label for="pozo_letras">Pozo</label>
         <div class="pozo-wrap">
+          <!-- LETRAS: entre 2 y 4 -->
           <input id="pozo_letras" name="pozo_letras"
-                 placeholder="AA"
-                 pattern="[A-Za-z]{2}"
-                 maxlength="2"
+                 placeholder="ABCD"
+                 pattern="[A-Za-z]{2,4}"
+                 minlength="2" maxlength="4"
                  autocomplete="off"
                  inputmode="latin"
+                 aria-describedby="pozoHelp"
                  required />
           <span aria-hidden="true">-</span>
+          <!-- NÚMEROS: exactamente 4 -->
           <input id="pozo_num" name="pozo_num"
-                 placeholder="1234"
+                 placeholder="0000"
                  pattern="[0-9]{4}"
-                 maxlength="4"
+                 minlength="4" maxlength="4"
                  autocomplete="off"
                  inputmode="numeric"
                  required />
         </div>
+        <small id="pozoHelp" class="hint">
+          Letras: 2 a 4. Números: exactamente 4 dígitos
+        </small>
         <input type="hidden" id="pozo" name="pozo" />
       </div>
 
@@ -113,15 +120,14 @@
   </div>
 
   <script>
-    // --- Configuración inicial y validaciones ligeras ---
     document.addEventListener('DOMContentLoaded', () => {
-      // 1) Fecha: hoy por defecto y sin futuras
+      // Fecha: hoy por defecto y sin futuras
       const fechaInput = document.getElementById('fecha');
       const today = new Date().toISOString().split('T')[0];
       fechaInput.value = today;
       fechaInput.setAttribute('max', today);
 
-      // 2) Selección de campos
+      // Campos varios
       const areaInput = document.getElementById('area');
       const otInput = document.getElementById('ot');
       const solicitadoInput = document.getElementById('solicitado');
@@ -145,26 +151,40 @@
       const pozoL = document.getElementById('pozo_letras');
       const pozoN = document.getElementById('pozo_num');
 
-      // Letras: mayúsculas + sólo A-Z, autoadelanto al completar 2
+      // Letras: MAYÚSCULAS + sólo A–Z, largo 2–4
       pozoL.addEventListener('input', (e) => {
-        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0,2);
-        if (e.target.value.length === 2) pozoN.focus();
+        let val = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+        e.target.value = val;
+        // Mensaje si queda corto
+        if (val.length < 2) {
+          pozoL.setCustomValidity('Ingresá entre 2 y 4 letras (A–Z).');
+        } else {
+          pozoL.setCustomValidity('');
+        }
       });
 
-      // Números: sólo 0-9, máximo 4
+      // Números: sólo 0–9, exactamente 4
       pozoN.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0,4);
+        let val = (e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4);
+        e.target.value = val;
+        if (val.length !== 4) {
+          pozoN.setCustomValidity('Ingresá exactamente 4 dígitos.');
+        } else {
+          pozoN.setCustomValidity('');
+        }
       });
 
-      // Permitir pegar "AB-1234" o "AB1234" en cualquiera de los dos
+      // Pegado inteligente: acepta sólo si cumple letras 2–4 y números 4
       function handlePasteNormalize(evt){
         const text = (evt.clipboardData || window.clipboardData).getData('text') || '';
         const cleaned = text.toUpperCase().replace(/[^A-Z0-9-]/g,'');
-        const m = cleaned.match(/^([A-Z]{2})-?([0-9]{4})$/);
+        const m = cleaned.match(/^([A-Z]{2,4})-?([0-9]{4})$/);
         if (m){
           evt.preventDefault();
           pozoL.value = m[1];
           pozoN.value = m[2];
+          pozoL.setCustomValidity('');
+          pozoN.setCustomValidity('');
           pozoN.focus();
         }
       }
@@ -172,19 +192,28 @@
       pozoN.addEventListener('paste', handlePasteNormalize);
     });
 
-    // --- Envío y guardado ---
+    // --- Submit y armado de objeto ---
     document.getElementById('inicioForm').addEventListener('submit', (e) => {
-      // Dejar que el navegador valide cada parte por pattern
+      // Dejar que HTML5 marque errores primero
       if (!e.target.checkValidity()){
-        // Si hay error nativo de HTML5, dejamos que lo muestre y no prevenimos
         return;
       }
 
       e.preventDefault();
 
-      // Armar "pozo" final: AA-1234
       const letras = (document.getElementById('pozo_letras').value || '').toUpperCase();
       const nums   = (document.getElementById('pozo_num').value || '');
+
+      // Validación defensiva JS
+      if (!/^[A-Z]{2,4}$/.test(letras)) {
+        document.getElementById('pozo_letras').reportValidity();
+        return;
+      }
+      if (!/^[0-9]{4}$/.test(nums)) {
+        document.getElementById('pozo_num').reportValidity();
+        return;
+      }
+
       const pozoValue = `${letras}-${nums}`;
       document.getElementById('pozo').value = pozoValue;
 
@@ -192,7 +221,7 @@
         fecha: e.target.fecha.value,
         cliente: e.target.cliente.value,
         area: e.target.area.value,
-        pozo: pozoValue,                 // << AB-1234
+        pozo: pozoValue,
         ot: e.target.ot.value,
         operador: e.target.operador.value,
         ayudante: e.target.ayudante.value,
@@ -201,7 +230,7 @@
       };
 
       localStorage.setItem('intervencionActual', JSON.stringify(intervencion));
-      window.location.href = 'Corrosion.html';
+      window.location.href = 'desgaste.html';
     });
   </script>
 </body>

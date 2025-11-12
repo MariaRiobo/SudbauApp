@@ -1,97 +1,218 @@
-<!DOCTYPE h <a href="Corrosion.html" class="btn-volver"tml>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Sudbau</title>
-    <link rel="stylesheet" href="css/app.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desgaste</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    .desactivado, .desactivado:focus, .desactivado:hover {
+      pointer-events: none;
+      opacity: .5;
+      cursor: not-allowed !important;
+      filter: grayscale(20%);
+    }
+    .justificacion-container{
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid #CDCDDC;
+      border-radius: 10px;
+      background: #fff;
+    }
+    .justificacion-container textarea{
+      width: 100%;
+      min-height: 96px;
+      padding: 10px 12px;
+      border: 1px solid #0055AA;
+      border-radius: 10px;
+      font-family: "Noto Sans", sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      text-transform: uppercase;
+    }
+    .btn-justificar:disabled{
+      opacity: .5;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header-corrosion">
-            <div class="header-left">
-                <img src="img/logo.png" alt="Logo de la empresa" class="logo">
-                <div class="titulo-y-tubo">
-                <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
-                <h1 class="title">DESGASTE</h1>
-                </div>
-            </div>
+  <div class="container">
+    <div class="header-corrosion">
+      <div class="header-left">
+        <img src="img/logo.png" alt="Logo de la empresa" class="logo">
+        <div class="titulo-y-tubo">
+          <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
+          <h1 class="title">DESGASTE</h1>
         </div>
-
-
-        <div class="botones-container">
-            <a href="tipo.html" class="btn-color amarillo">G2</a>
-            <a href="tipo.html" class="btn-color azul">G3</a>
-            <a href="tipo.html" class="btn-color verde">G4</a>
-            <a href="tipo.html" class="btn-color rojo">G5</a>
-            <a href="tipo.html" class="btn-color blanco">UNGRADE</a>
-        </div>
-        
-
-        <div class="controles">
-            <a href="Corrosion.html" class="btn-volver">Volver</a>
-        </div>
-
-        
-
+      </div>
     </div>
 
-<script>
-  function loadIntervencion() {
-    const raw = localStorage.getItem('intervencionActual');
-    if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
-    const itv = JSON.parse(raw);
-    if (!itv.draft) itv.draft = {};
-    if (!itv.eventos) itv.eventos = [];
-    return itv;
-  }
-  function saveIntervencion(itv){
-    localStorage.setItem('intervencionActual', JSON.stringify(itv));
-  }
-  function pushEvento(tipo, extra = {}) {
-    const itv = loadIntervencion(); if (!itv) return;
-    itv.eventos.push({
-      tipo, tubo: Number(itv.tuboActual),
-      at: new Date().toISOString(),
-      ...extra
-    });
-    saveIntervencion(itv);
-  }
+    <div class="botones-container">
+      <a href="Corrosion.html" class="btn-color amarillo">G2</a>
+      <a href="Corrosion.html" class="btn-color azul">G3</a>
+      <a href="Corrosion.html" class="btn-color verde">G4</a>
+      <a href="Corrosion.html" class="btn-color rojo">G5</a>
+      <a href="Corrosion.html" class="btn-color blanco">UNGRADE</a>
+    </div>
 
-  /* ========= Estado inicial: número de tubo ========= */
-  const itv = loadIntervencion();
-  if (itv) {
+    <div class="controles">
+      <button type="button" class="btn-volver">Volver</button>
+      <button class="btn-parada">Parada</button>
+    </div>
+
+    <div class="justificacion-container" style="display:none;">
+      <p>Fecha y hora: <span id="fecha-hora"></span></p>
+      <label for="justificacion">Justificación:</label>
+      <textarea id="justificacion" rows="4" placeholder="DETALLAR MOTIVO DE PARADA"></textarea>
+      <button class="btn-justificar" disabled>Justificar</button>
+    </div>
+
+    <button class="btn-arranque" style="display:none;">Arranque</button>
+  </div>
+
+  <script>
+    /* ===== Local Storage Helpers ===== */
+    function loadIntervencion() {
+      const raw = localStorage.getItem('intervencionActual');
+      if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
+      const itv = JSON.parse(raw);
+      if (!itv.draft) itv.draft = {};
+      if (!itv.eventos) itv.eventos = [];
+      return itv;
+    }
+    function saveIntervencion(itv) {
+      localStorage.setItem('intervencionActual', JSON.stringify(itv));
+    }
+    function pushEvento(tipo, extra = {}) {
+      const itv = loadIntervencion(); if (!itv) return;
+      itv.eventos.push({
+        tipo,
+        tubo: Number(itv.tuboActual),
+        at: new Date().toISOString(),
+        ...extra
+      });
+      saveIntervencion(itv);
+    }
+
+    /* ===== Inicialización ===== */
+    const itv = loadIntervencion();
     const numeroTuboSpan = document.getElementById('numero-tubo');
-    if (numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
-  }
+    if (itv && numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
 
-  /* ========= Guardar selección de DESGASTE y navegar ========= */
-  document.querySelectorAll('.botones-container .btn-color').forEach(a => {
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
+    const justificacionContainer = document.querySelector('.justificacion-container');
+    const btnParada = document.querySelector('.btn-parada');
+    const btnArranque = document.querySelector('.btn-arranque');
+    const fechaHoraSpan = document.getElementById('fecha-hora');
+    const btnJustificar = document.querySelector('.btn-justificar');
+    const botonesColor = document.querySelectorAll('.btn-color');
+    const btnVolver = document.querySelector('.btn-volver');
+    const txtJustificacion = document.getElementById('justificacion');
 
-      // detectar color por clase (amarillo/azul/verde/rojo/blanco)
-      const clases = e.currentTarget.className.split(/\s+/);
-      const color = ['amarillo','azul','verde','rojo','blanco']
-        .find(c => clases.includes(c)) || 'desconocido';
+    /* ===== Parada / Justificar / Arranque ===== */
+    btnParada.addEventListener('click', () => {
+      const now = new Date();
+      fechaHoraSpan.textContent = now.toLocaleString();
+      justificacionContainer.style.display = 'block';
 
-      const itv2 = loadIntervencion(); if (!itv2) return;
-      itv2.draft.desgasteColor = color;   // ✅ queda en draft
-      saveIntervencion(itv2);
+      botonesColor.forEach(btn => btn.classList.add('desactivado'));
+      btnVolver.classList.add('desactivado');
+      btnVolver.setAttribute('aria-disabled', 'true');
 
-      // ✅ traza en eventos (así lo ves como en corrosión)
-      pushEvento('desgasteSeleccionado', { color });
+      btnParada.disabled = true;
+      btnJustificar.disabled = true;
 
-      // navegar a Tipo
-      window.location.href = e.currentTarget.getAttribute('href'); // tipo.html
+      pushEvento('parada');
     });
-  });
-</script>
 
+    // Evitar navegación en "Volver" mientras esté desactivado por parada
+    btnVolver.addEventListener('click', (e) => {
+      if (btnVolver.classList.contains('desactivado')) {
+        e.preventDefault();
+        return;
+      }
+
+      // Comportamiento nuevo → volver a Cupla del tubo anterior
+      const itv = loadIntervencion();
+      if (!itv) return;
+
+      const actual = Number(itv.tuboActual || 1);
+      const anterior = actual - 1;
+
+      if (anterior < 1) {
+        alert('Ya estás en el primer tubo. No se puede retroceder más.');
+        return;
+      }
+
+      const confirmar = confirm(`Vas a volver al tubo anterior (Tubo Nº ${anterior}). ¿Querés continuar?`);
+      if (!confirmar) return;
+
+      itv.tuboActual = anterior;
+      saveIntervencion(itv);
+      pushEvento('volverACupla', { tuboDestino: anterior });
+
+      window.location.href = 'Cupla.html';
+    });
+
+    // Uppercase + habilitar Justificar
+    txtJustificacion.addEventListener('input', (e) => {
+      const upper = e.target.value.toUpperCase();
+      if (e.target.value !== upper) {
+        const selStart = e.target.selectionStart;
+        const selEnd = e.target.selectionEnd;
+        e.target.value = upper;
+        e.target.setSelectionRange(selStart, selEnd);
+      }
+      btnJustificar.disabled = upper.trim().length === 0;
+    });
+
+    // Justificar → habilitar arranque
+    btnJustificar.addEventListener('click', () => {
+      const txt = (txtJustificacion.value || '').trim().toUpperCase();
+      if (txt.length === 0) return;
+      btnArranque.style.display = 'block';
+      pushEvento('justificacion', { texto: txt });
+    });
+
+    // Arranque → reactivar controles
+    btnArranque.addEventListener('click', () => {
+      botonesColor.forEach(btn => btn.classList.remove('desactivado'));
+      btnVolver.classList.remove('desactivado');
+      btnVolver.removeAttribute('aria-disabled');
+
+      justificacionContainer.style.display = 'none';
+      btnArranque.style.display = 'none';
+      btnParada.disabled = false;
+      txtJustificacion.value = '';
+      btnJustificar.disabled = true;
+
+      pushEvento('arranque');
+    });
+
+    /* ===== Selección de color → guarda draft y navega ===== */
+    document.querySelectorAll('.botones-container .btn-color').forEach(a => {
+      a.addEventListener('click', (e) => {
+        if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
+
+        e.preventDefault();
+        const cls = e.currentTarget.className.split(/\s+/);
+        const color = ['amarillo','azul','verde','rojo','blanco'].find(c => cls.includes(c)) || 'desconocido';
+
+        const itv2 = loadIntervencion(); if (!itv2) return;
+        itv2.draft.desgasteColor = color;
+        saveIntervencion(itv2);
+
+        pushEvento('desgasteSeleccionado', { color });
+
+        window.location.href = e.currentTarget.getAttribute('href'); // Corrosion.html
+      });
+    });
+  </script>
 </body>
 </html>

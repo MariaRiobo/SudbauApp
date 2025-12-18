@@ -24,7 +24,6 @@
       font-family: 'Kanit', sans-serif; font-size: 14px;
     }
 
-    /* Estado deshabilitado visible */
     .btn:disabled,
     .btn[disabled],
     #btn-siguiente-tubo:disabled,
@@ -42,7 +41,6 @@
 
 <body>
   <div class="container container-large container-wide">
-    <!-- Header -->
     <div class="header-corrosion">
       <div class="header-left">
         <img src="img/logo.png" alt="Logo de la empresa" class="logo">
@@ -53,7 +51,6 @@
       </div>
     </div>
 
-    <!-- SOLO dos opciones: Buena / Defectuosa -->
     <div class="tipo-container">
       <div class="tipo-item">
         <a href="" class="tipo-btn" data-code="buena">BUENA</a>
@@ -102,28 +99,45 @@
       saveIntervencion(itv);
     }
 
-    // Consolida registro del tubo, incrementa contador y limpia draft
-    function commitTubeAndIncrement(extra = {}) {
-      const itv = loadIntervencion(); if (!itv) return null;
+    /* ===== Helpers para tubos[] ===== */
+    function loadTubes(){ return JSON.parse(localStorage.getItem('tubos') || '[]'); }
+    function saveTubes(arr){ localStorage.setItem('tubos', JSON.stringify(arr)); }
+    function ensureTubeIndex(tubes, idx){
+      while (tubes.length <= idx) tubes.push({ nro: tubes.length + 1, draft: {}, completedAt: null });
+      return tubes[idx];
+    }
+    function currentTubeIndex(itv){ return Number(itv.tuboActual || 1) - 1; }
 
-      const registro = {
-        tubo: Number(itv.tuboActual),
-        ...itv.draft,          // debería contener: desgasteColor, corrosionColor, tipo
-        ...extra,              // acá entra cupla_status u otros campos finales
-        timestampLocal: new Date().toISOString()
-      };
-
-      itv.registros.push(registro);
-      itv.tuboActual = Number(itv.tuboActual || 0) + 1;
-      itv.draft = {}; // limpiar para el próximo tubo
+    function syncDraftFromTube(){
+      const itv = loadIntervencion(); if (!itv) return;
+      const tubes = loadTubes();
+      const idx = currentTubeIndex(itv);
+      const t = ensureTubeIndex(tubes, idx);
+      itv.draft = { ...(t.draft||{}), ...(itv.draft||{}) };
       saveIntervencion(itv);
-      return registro;
+    }
+    function syncTubeFromDraft(){
+      const itv = loadIntervencion(); if (!itv) return;
+      const tubes = loadTubes();
+      const idx = currentTubeIndex(itv);
+      const t = ensureTubeIndex(tubes, idx);
+      t.draft = { ...(t.draft||{}), ...(itv.draft||{}) };
+      saveTubes(tubes);
+    }
+
+    function isEditMode(){ return localStorage.getItem('editMode') === 'true'; }
+    function clearEditMode(){
+      localStorage.setItem('editMode','false');
+      localStorage.removeItem('editTubeIndex');
     }
 
     /* ===== UI init ===== */
     const itvInit = loadIntervencion();
     const tuboSpan = document.getElementById('numero-tubo');
     if (itvInit && tuboSpan) tuboSpan.textContent = itvInit.tuboActual;
+
+    // NUEVO: si venís a editar, precargá el draft del tubo
+    if (itvInit) syncDraftFromTube();
 
     const tipoBtns = document.querySelectorAll('.tipo-btn');
     const btnSiguiente = document.getElementById('btn-siguiente-tubo');
@@ -141,25 +155,23 @@
     tipoBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
-        seleccionActual = btn.dataset.code; // 'buena' o 'defectuosa'
+        seleccionActual = btn.dataset.code;
 
-        // Visual: resaltar selección y desactivar la otra
         tipoBtns.forEach(b => (b === btn) ? b.classList.add('selected') : b.classList.add('desactivado'));
 
-        // Habilitar CTAs
         btnSiguiente.disabled = false;
         btnFinalizar.disabled = false;
 
-        // Banner de confirmación
         const textoHumano = (seleccionActual === 'buena') ? 'CUPLA BUENA' : 'CUPLA DEFECTUOSA';
         bannerTexto.textContent = `Seleccionaste: ${textoHumano}`;
         banner.hidden = false;
 
-        // Guardado en draft + evento
+        // Guardado en draft + sync a tubos
         setDraft('cupla_status', seleccionActual);
+        syncTubeFromDraft();
+
         pushEvento('cuplaSeleccionada', { cupla_status: seleccionActual });
 
-        // Scroll a CTAs
         const target = document.getElementById('controles-cta');
         if (target) {
           const y = target.getBoundingClientRect().top + window.pageYOffset - 80;
@@ -168,7 +180,7 @@
       });
     });
 
-    // Cambiar la selección
+    // Cambiar selección
     bannerCambiar.addEventListener('click', () => {
       seleccionActual = null;
       tipoBtns.forEach(b => b.classList.remove('selected', 'desactivado'));
@@ -176,29 +188,66 @@
       btnFinalizar.disabled = true;
       banner.hidden = true;
       setDraft('cupla_status', undefined);
+      syncTubeFromDraft();
     });
 
-    // Siguiente tubo → consolidar, incrementar y volver a DESGASTE
+    // Si ya venía seleccionado (modo edición), pre-seleccionar
+    const itvPrefill = loadIntervencion();
+    if (itvPrefill && itvPrefill.draft && itvPrefill.draft.cupla_status) {
+      const val = itvPrefill.draft.cupla_status;
+      const btn = Array.from(tipoBtns).find(b => b.dataset.code === val);
+      if (btn) btn.click();
+    }
+
+    // Siguiente tubo
     btnSiguiente.addEventListener('click', () => {
       if (!seleccionActual) return;
 
-      // Evento de cierre del tubo actual (opcional pero útil para auditoría)
       pushEvento('tuboCerrado', { cupla_status: seleccionActual });
 
-      const reg = commitTubeAndIncrement({ cupla_status: seleccionActual });
-      console.log('Registro consolidado:', reg);
+      // marcar completado en tubos[]
+      const itv = loadIntervencion(); if (!itv) return;
+      const tubes = loadTubes();
+      const idx = currentTubeIndex(itv);
+      const t = ensureTubeIndex(tubes, idx);
+      t.completedAt = new Date().toISOString();
+      saveTubes(tubes);
 
-      // Arranca siguiente tubo en DESGASTE
+      if (isEditMode()) {
+        // editando un tubo viejo -> volver al fin del proceso
+        clearEditMode();
+        itv.draft = {};
+        saveIntervencion(itv);
+        window.location.href = (localStorage.getItem('lastPage') || 'findelproceso.html');
+        return;
+      }
+
+      // flujo normal -> avanzar
+      itv.tuboActual = Number(itv.tuboActual || 0) + 1;
+      itv.draft = {};
+      saveIntervencion(itv);
+
       window.location.href = 'Desgaste.html';
     });
 
-    // Finalizar inspección
+    // Finalizar inspección -> ir a findelproceso.html
     btnFinalizar.addEventListener('click', () => {
       if (!seleccionActual) return;
-      const reg = commitTubeAndIncrement({ cupla_status: seleccionActual, finForzado: true });
-      console.log('Registro final:', reg);
-      localStorage.removeItem('intervencionActual');
-      window.location.href = 'InicioSesion.html';
+
+      const itv = loadIntervencion(); if (!itv) return;
+
+      // marcar completado en tubos[]
+      const tubes = loadTubes();
+      const idx = currentTubeIndex(itv);
+      const t = ensureTubeIndex(tubes, idx);
+      t.completedAt = new Date().toISOString();
+      saveTubes(tubes);
+
+      clearEditMode();
+      itv.draft = {};
+      saveIntervencion(itv);
+
+      window.location.href = 'findelproceso.html';
     });
   </script>
 </body>

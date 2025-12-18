@@ -51,16 +51,49 @@
     function pushEvento(tipo, extra = {}) {
       const itv = loadIntervencion(); if (!itv) return;
       itv.eventos.push({
-        tipo, tubo: Number(itv.tuboActual),
+        tipo,
+        tubo: Number(itv.tuboActual),
         at: new Date().toISOString(),
         ...extra
       });
       saveIntervencion(itv);
     }
 
-    // Mostrar número de tubo
+    /* ===== NUEVO: helpers para tubos[] ===== */
+    function loadTubes() {
+      return JSON.parse(localStorage.getItem('tubos') || '[]');
+    }
+    function saveTubes(arr) {
+      localStorage.setItem('tubos', JSON.stringify(arr));
+    }
+    function ensureTubeIndex(tubes, idx) {
+      while (tubes.length <= idx) tubes.push({ nro: tubes.length + 1, draft: {}, completedAt: null });
+      return tubes[idx];
+    }
+    function currentTubeIndex(itv) {
+      return Number(itv.tuboActual || 1) - 1; // tubo 1 => index 0
+    }
+    function syncDraftFromTube() {
+      const itv = loadIntervencion(); if (!itv) return;
+      const tubes = loadTubes();
+      const idx = currentTubeIndex(itv);
+      const t = ensureTubeIndex(tubes, idx);
+      itv.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
+      saveIntervencion(itv);
+    }
+    function syncTubeFromDraft() {
+      const itv = loadIntervencion(); if (!itv) return;
+      const tubes = loadTubes();
+      const idx = currentTubeIndex(itv);
+      const t = ensureTubeIndex(tubes, idx);
+      t.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
+      saveTubes(tubes);
+    }
+
+    // Mostrar número de tubo + precargar draft del tubo
     const itv = loadIntervencion();
     if (itv) {
+      syncDraftFromTube(); // NUEVO
       const numeroTubo = document.getElementById('numero-tubo');
       if (numeroTubo) numeroTubo.textContent = itv.tuboActual;
     }
@@ -70,7 +103,6 @@
       a.addEventListener('click', (e) => {
         e.preventDefault();
 
-        // Detectar color por clase
         const cls = e.currentTarget.className.split(/\s+/);
         const color = ['amarillo','azul','verde','rojo','blanco'].find(c => cls.includes(c)) || 'desconocido';
 
@@ -78,10 +110,12 @@
         itv2.draft.corrosionColor = color;
         saveIntervencion(itv2);
 
+        // NUEVO: persistir también por tubo en tubos[]
+        syncTubeFromDraft();
+
         pushEvento('corrosionSeleccionada', { color });
 
-        // Navegar a tipo.html (tomado del href)
-        window.location.href = e.currentTarget.getAttribute('href');
+        window.location.href = e.currentTarget.getAttribute('href'); // tipo.html
       });
     });
   </script>

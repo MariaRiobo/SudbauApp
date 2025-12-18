@@ -23,8 +23,6 @@
       border-radius: 10px;
       background: #fff;
     }
-    /* --- INICIO MODIFICACIÓN ESTILOS --- */
-    /* Estilos para el nuevo input-lista */
     .justificacion-container input[type="text"] {
       width: 100%;
       padding: 10px 12px;
@@ -33,9 +31,8 @@
       font-family: "Noto Sans", sans-serif;
       font-size: 14px;
       text-transform: uppercase;
-      box-sizing: border-box; /* Para que el padding no rompa el width */
+      box-sizing: border-box;
     }
-    /* Estilos para el textarea (ahora es para "OTROS") */
     .justificacion-container textarea{
       width: 100%;
       min-height: 96px;
@@ -46,11 +43,9 @@
       font-size: 14px;
       resize: vertical;
       text-transform: uppercase;
-      box-sizing: border-box; /* Para que el padding no rompa el width */
-      margin-top: 10px; /* Separación cuando aparece */
+      box-sizing: border-box;
+      margin-top: 10px;
     }
-    /* --- FIN MODIFICACIÓN ESTILOS --- */
-
     .btn-justificar:disabled{
       opacity: .5;
       cursor: not-allowed;
@@ -86,11 +81,11 @@
 
     <div class="justificacion-container" style="display:none;">
       <p>Fecha y hora: <span id="fecha-hora"></span></p>
-      
+
       <label for="justificacion_lista">Justificación:</label>
-      
+
       <input type="text" id="justificacion_lista" list="justificaciones_opciones" placeholder="Seleccionar o escribir motivo..." autocomplete="off">
-      
+
       <datalist id="justificaciones_opciones">
         <option value="ESPERA POR MANIOBRAS">
         <option value="MONTAJE DE EQUIPO SCANNEX">
@@ -159,10 +154,44 @@
       saveIntervencion(itv);
     }
 
+    /* ===== NUEVO: helpers para tubos[] ===== */
+    function loadTubes() {
+      return JSON.parse(localStorage.getItem('tubos') || '[]');
+    }
+    function saveTubes(arr) {
+      localStorage.setItem('tubos', JSON.stringify(arr));
+    }
+    function ensureTubeIndex(tubes, idx) {
+      while (tubes.length <= idx) tubes.push({ nro: tubes.length + 1, draft: {}, completedAt: null });
+      return tubes[idx];
+    }
+    function currentTubeIndex(itv) {
+      return Number(itv.tuboActual || 1) - 1; // tubo 1 => index 0
+    }
+    function syncDraftFromTube() {
+      const itv = loadIntervencion(); if (!itv) return;
+      const tubes = loadTubes();
+      const idx = currentTubeIndex(itv);
+      const t = ensureTubeIndex(tubes, idx);
+      itv.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
+      saveIntervencion(itv);
+    }
+    function syncTubeFromDraft() {
+      const itv = loadIntervencion(); if (!itv) return;
+      const tubes = loadTubes();
+      const idx = currentTubeIndex(itv);
+      const t = ensureTubeIndex(tubes, idx);
+      t.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
+      saveTubes(tubes);
+    }
+
     /* ===== Inicialización ===== */
     const itv = loadIntervencion();
     const numeroTuboSpan = document.getElementById('numero-tubo');
     if (itv && numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
+
+    // NUEVO: si venís a editar un tubo viejo, precargá el draft guardado
+    if (itv) syncDraftFromTube();
 
     const justificacionContainer = document.querySelector('.justificacion-container');
     const btnParada = document.querySelector('.btn-parada');
@@ -171,12 +200,9 @@
     const btnJustificar = document.querySelector('.btn-justificar');
     const botonesColor = document.querySelectorAll('.btn-color');
     const btnVolver = document.querySelector('.btn-volver');
-    
-    // --- INICIO MODIFICACIÓN JS (Nuevos Elementos) ---
+
     const listaJustificacion = document.getElementById('justificacion_lista');
     const txtJustificacionOtros = document.getElementById('justificacion_otros');
-    // --- FIN MODIFICACIÓN JS ---
-
 
     /* ===== Parada / Justificar / Arranque ===== */
     btnParada.addEventListener('click', () => {
@@ -189,7 +215,7 @@
       btnVolver.setAttribute('aria-disabled', 'true');
 
       btnParada.disabled = true;
-      btnJustificar.disabled = true; // Se mantiene deshabilitado al inicio
+      btnJustificar.disabled = true;
 
       pushEvento('parada');
     });
@@ -200,7 +226,6 @@
         e.preventDefault();
         return;
       }
-      // ... (resto de tu lógica de "Volver" se mantiene igual) ...
       const itv = loadIntervencion();
       if (!itv) return;
       const actual = Number(itv.tuboActual || 1);
@@ -217,9 +242,6 @@
       window.location.href = 'Cupla.html';
     });
 
-    // --- INICIO MODIFICACIÓN JS (Nueva lógica de justificación) ---
-
-    // Función helper para forzar mayúsculas y mantener la posición del cursor
     function forceUppercase(e) {
       const upper = e.target.value.toUpperCase();
       if (e.target.value !== upper) {
@@ -231,36 +253,30 @@
       return upper;
     }
 
-    // Función para revisar el estado y habilitar/deshabilitar el botón "Justificar"
     function updateJustificarState() {
       const listaVal = listaJustificacion.value.trim().toUpperCase();
 
       if (listaVal === 'OTROS') {
-        // Si es "OTROS", mostrar el textarea y validar que no esté vacío
         txtJustificacionOtros.style.display = 'block';
         const otrosVal = txtJustificacionOtros.value.trim().toUpperCase();
         btnJustificar.disabled = otrosVal.length === 0;
       } else {
-        // Si no es "OTROS", ocultar el textarea y validar que la lista no esté vacía
         txtJustificacionOtros.style.display = 'none';
-        txtJustificacionOtros.value = ''; // Limpiar por si acaso
+        txtJustificacionOtros.value = '';
         btnJustificar.disabled = listaVal.length === 0;
       }
     }
 
-    // Listener para el input de la lista
     listaJustificacion.addEventListener('input', (e) => {
-      forceUppercase(e);       // Forzar mayúsculas
-      updateJustificarState(); // Revisar estado
+      forceUppercase(e);
+      updateJustificarState();
     });
 
-    // Listener para el textarea de "OTROS"
     txtJustificacionOtros.addEventListener('input', (e) => {
-      forceUppercase(e);       // Forzar mayúsculas
-      updateJustificarState(); // Revisar estado
+      forceUppercase(e);
+      updateJustificarState();
     });
 
-    // Justificar → habilitar arranque (MODIFICADO)
     btnJustificar.addEventListener('click', () => {
       const listaVal = listaJustificacion.value.trim().toUpperCase();
       let justificacionFinal = '';
@@ -271,14 +287,12 @@
         justificacionFinal = listaVal;
       }
 
-      // Chequeo de seguridad, aunque el botón debería estar deshabilitado
-      if (justificacionFinal.length === 0) return; 
+      if (justificacionFinal.length === 0) return;
 
       btnArranque.style.display = 'block';
       pushEvento('justificacion', { texto: justificacionFinal });
     });
 
-    // Arranque → reactivar controles (MODIFICADO)
     btnArranque.addEventListener('click', () => {
       botonesColor.forEach(btn => btn.classList.remove('desactivado'));
       btnVolver.classList.remove('desactivado');
@@ -287,8 +301,7 @@
       justificacionContainer.style.display = 'none';
       btnArranque.style.display = 'none';
       btnParada.disabled = false;
-      
-      // Limpiar los nuevos campos
+
       listaJustificacion.value = '';
       txtJustificacionOtros.value = '';
       txtJustificacionOtros.style.display = 'none';
@@ -297,9 +310,6 @@
 
       pushEvento('arranque');
     });
-    
-    // --- FIN MODIFICACIÓN JS ---
-
 
     /* ===== Selección de color → guarda draft y navega ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
@@ -313,6 +323,9 @@
         const itv2 = loadIntervencion(); if (!itv2) return;
         itv2.draft.desgasteColor = color;
         saveIntervencion(itv2);
+
+        // NUEVO: persistir también por tubo en tubos[]
+        syncTubeFromDraft();
 
         pushEvento('desgasteSeleccionado', { color });
 

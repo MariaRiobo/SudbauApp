@@ -1,15 +1,157 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Sudbau</title>
-    <link rel="stylesheet" href="css/app.css">
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fin del proceso</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .card{
+      background:#fff;
+      border:1px solid #CDCDDC;
+      border-radius:12px;
+      padding:14px;
+      margin:12px 0;
+    }
+    .hint{
+      font-size:13px;
+      color:#05145A;
+      margin-top:6px;
+    }
+    label{ display:block; margin-bottom:6px; }
+    select{
+      width:100%;
+      padding:10px 12px;
+      border:1px solid #0055AA;
+      border-radius:10px;
+      box-sizing:border-box;
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .row .btn{ flex:1; }
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+      filter:grayscale(100%);
+      box-shadow:none;
+      transform:none;
+    }
+  </style>
 </head>
-<body>
-    
 
-  
+<body>
+  <div class="container">
+    <div class="header header-login">
+      <img src="img/logoHorizontal.png" alt="Logo de la empresa" class="logo" />
+      <h1 class="title">Fin del proceso</h1>
+    </div>
+
+    <div class="card" id="resumen"></div>
+
+    <div class="card">
+      <label for="editSelect">¿Querés editar algún tubo anterior?</label>
+      <select id="editSelect">
+        <option value="">— Elegí un tubo —</option>
+      </select>
+      <div class="hint">Tip: si la máquina devolvió el dato tarde, elegí el tubo y tocá “Editar”.</div>
+
+      <div class="row">
+        <button class="btn" id="btnEditar" disabled>Editar</button>
+        <button class="btn btn-danger" id="btnCerrar">Finalizar definitivamente</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function loadIntervencion() {
+      const raw = localStorage.getItem('intervencionActual');
+      if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
+      return JSON.parse(raw);
+    }
+    function saveIntervencion(itv){
+      localStorage.setItem('intervencionActual', JSON.stringify(itv));
+    }
+    function loadTubes(){
+      return JSON.parse(localStorage.getItem('tubos') || '[]');
+    }
+
+    const itv = loadIntervencion();
+    const tubos = loadTubes();
+
+    // ===== Resumen =====
+    const resumen = document.getElementById('resumen');
+    if (itv && resumen) {
+      resumen.innerHTML = `
+        <b>${itv.cliente || ''}</b><br>
+        Fecha: ${itv.fecha || ''}<br>
+        Área: ${itv.area || ''}<br>
+        Pozo: ${itv.pozo || ''}<br>
+        OT: ${itv.ot || ''}<br>
+        Operador: ${itv.operador || ''}<br>
+        Ayudante: ${itv.ayudante || ''}<br>
+        Solicitado: ${itv.solicitado || ''}<br>
+        <br>
+        Tubos registrados: <b>${tubos.length}</b>
+      `;
+    }
+
+    // ===== Dropdown de tubos =====
+    const sel = document.getElementById('editSelect');
+    const btnEditar = document.getElementById('btnEditar');
+
+    tubos.forEach((t, i) => {
+      const opt = document.createElement('option');
+      const estado = t.completedAt ? 'OK' : 'INCOMPLETO';
+      opt.value = String(i);
+      opt.textContent = `Tubo ${t.nro} — ${estado}`;
+      sel.appendChild(opt);
+    });
+
+    sel.addEventListener('change', () => {
+      btnEditar.disabled = (sel.value === "");
+    });
+
+    // ===== Editar tubo =====
+    btnEditar.addEventListener('click', () => {
+      if (sel.value === "") return;
+
+      const idx = Number(sel.value);
+      const t = tubos[idx];
+
+      // 1) Activar modo edición
+      localStorage.setItem('editMode', 'true');
+      localStorage.setItem('editTubeIndex', String(idx));
+      localStorage.setItem('lastPage', 'findelproceso.html');
+
+      // 2) Poner tuboActual en el elegido y precargar draft
+      const itv2 = loadIntervencion();
+      itv2.tuboActual = idx + 1;
+      itv2.draft = (t && t.draft) ? { ...t.draft } : {};
+      saveIntervencion(itv2);
+
+      // 3) Volver al loop
+      window.location.href = 'Desgaste.html';
+    });
+
+    // ===== Finalizar definitivamente =====
+    document.getElementById('btnCerrar').addEventListener('click', () => {
+      const ok = confirm('¿Finalizar definitivamente? Esto cerrará la intervención.');
+      if (!ok) return;
+
+      // limpiar todo lo de la intervención
+      localStorage.removeItem('intervencionActual');
+      localStorage.removeItem('tubos');
+      localStorage.removeItem('editMode');
+      localStorage.removeItem('editTubeIndex');
+      localStorage.removeItem('lastPage');
+
+      window.location.href = 'InicioSesion.html';
+    });
+  </script>
 </body>
 </html>

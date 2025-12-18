@@ -14,12 +14,11 @@
     .hint{ color:#05145A; font-size:13px; }
     .header-login .logo{ max-height:48px; }
     .btn{ cursor:pointer; }
-    
-    
+
     /* Para que los nuevos inputs con lista se vean bien */
     .form-group input[list] {
       width: 100%;
-      box-sizing: border-box; /* Asegura que el padding no afecte el ancho */
+      box-sizing: border-box;
     }
   </style>
 </head>
@@ -38,9 +37,9 @@
 
       <div class="form-group">
         <label for="cliente">Cliente</label>
-        <input type="text" id="cliente" name="cliente" 
-               list="cliente-list" 
-               placeholder="Seleccionar o escribir cliente..." 
+        <input type="text" id="cliente" name="cliente"
+               list="cliente-list"
+               placeholder="Seleccionar o escribir cliente..."
                required autocomplete="off" />
         <datalist id="cliente-list">
           <option value="PAESA">
@@ -81,9 +80,9 @@
 
       <div class="form-group">
         <label for="operador">Operador</label>
-        <input type="text" id="operador" name="operador" 
+        <input type="text" id="operador" name="operador"
                list="operador-list"
-               placeholder="Seleccionar o escribir operador..." 
+               placeholder="Seleccionar o escribir operador..."
                required autocomplete="off" />
         <datalist id="operador-list">
           <option value="SAPURI CRISTIAN">
@@ -97,9 +96,9 @@
 
       <div class="form-group">
         <label for="ayudante">Ayudante</label>
-        <input type="text" id="ayudante" name="ayudante" 
+        <input type="text" id="ayudante" name="ayudante"
                list="ayudante-list"
-               placeholder="Seleccionar o escribir ayudante..." 
+               placeholder="Seleccionar o escribir ayudante..."
                required autocomplete="off" />
         <datalist id="ayudante-list">
           <option value="GONZALES DENIS">
@@ -126,7 +125,6 @@
       fechaInput.value = today;
       fechaInput.setAttribute('max', today);
 
-     
       const clienteInput = document.getElementById('cliente');
       const operadorInput = document.getElementById('operador');
       const ayudanteInput = document.getElementById('ayudante');
@@ -148,20 +146,19 @@
 
       // Helper para validar que el valor exista en el datalist
       const validateDatalist = (inputEl) => {
-        const val = inputEl.value.toUpperCase(); // Asegurarnos de comparar en mayúsculas
+        const val = inputEl.value.toUpperCase();
         const datalist = inputEl.list;
-        if (!datalist) return; // Salir si no hay datalist
+        if (!datalist) return;
 
-        // Si el campo no está vacío, verificar que el valor esté en la lista
         if (val.trim() !== '') {
           const esValido = Array.from(datalist.options).some(opt => opt.value === val);
           if (!esValido) {
             inputEl.setCustomValidity('Por favor, seleccioná un valor válido de la lista.');
           } else {
-            inputEl.setCustomValidity(''); // Válido
+            inputEl.setCustomValidity('');
           }
         } else {
-          inputEl.setCustomValidity(''); // Dejar que 'required' se encargue si está vacío
+          inputEl.setCustomValidity('');
         }
       };
 
@@ -176,8 +173,6 @@
       clienteInput.addEventListener('blur', () => validateDatalist(clienteInput));
       operadorInput.addEventListener('blur', () => validateDatalist(operadorInput));
       ayudanteInput.addEventListener('blur', () => validateDatalist(ayudanteInput));
-      // --- FIN CAMPOS MODIFICADOS ---
-
 
       // OT -> Solo dígitos
       otInput.addEventListener('input', (e) => {
@@ -210,7 +205,6 @@
         }
       });
 
-      
       function handlePasteNormalize(evt){
         const text = (evt.clipboardData || window.clipboardData).getData('text') || '';
         const cleaned = text.toUpperCase().replace(/[^A-Z0-9-]/g,'');
@@ -230,7 +224,6 @@
 
     // --- Submit y armado de objeto ---
     document.getElementById('inicioForm').addEventListener('submit', (e) => {
-      // Dejar que HTML5 marque errores primero (esto AHORA incluye los datalist)
       if (!e.target.checkValidity()){
         return;
       }
@@ -240,7 +233,6 @@
       const letras = (document.getElementById('pozo_letras').value || '').toUpperCase();
       const nums   = (document.getElementById('pozo_num').value || '');
 
-      // Validación defensiva JS (Pozo)
       if (!/^[A-Z]{2,4}$/.test(letras)) {
         document.getElementById('pozo_letras').reportValidity();
         return;
@@ -253,9 +245,6 @@
       const pozoValue = `${letras}-${nums}`;
       document.getElementById('pozo').value = pozoValue;
 
-    
-
-      // 1. Armar el objeto primero para mostrarlo
       const intervencion = {
         fecha: e.target.fecha.value,
         cliente: e.target.cliente.value,
@@ -267,11 +256,10 @@
         solicitado: e.target.solicitado.value,
         tuboActual: 1
       };
-      
-      // 2. Armar el mensaje de confirmación
+
       const mensajeConfirmacion = `
       ⚠️ Confirmar datos
-      
+
       Fecha:\t\t ${intervencion.fecha}
       Cliente:\t\t ${intervencion.cliente}
       Área:\t\t ${intervencion.area}
@@ -281,18 +269,23 @@
       Ayudante:\t ${intervencion.ayudante}
       Solicitado:\t ${intervencion.solicitado}
       ------------------------------------------------------
-      
+
       Una vez confirmado, no podrás editar esta información.
       `;
 
-      // 3. Mostrar el pop-up y actuar SEGÚN la respuesta
       if (confirm(mensajeConfirmacion)) {
-        // Si el usuario hace clic en "Aceptar"
+        // Guardar sesión actual
         localStorage.setItem('intervencionActual', JSON.stringify(intervencion));
+
+        // ===== NUEVO: preparar edición al final =====
+        localStorage.setItem('tubos', JSON.stringify([]));              // historial por tubo
+        localStorage.setItem('editMode', 'false');                       // modo edición OFF
+        localStorage.removeItem('editTubeIndex');                        // índice a editar
+        localStorage.setItem('lastPage', 'findelproceso.html');          // pantalla final
+
+        // Arrancar loop
         window.location.href = 'desgaste.html';
       } else {
-        // Si el usuario hace clic en "Cancelar"
-        // No hacemos nada y el usuario se queda en la página.
         return;
       }
     });

@@ -91,26 +91,49 @@
       saveTubes(tubes);
     }
 
-    /* ===== Init ===== */
+    /* ===== Inicialización y Lógica de Sugerencia ===== */
     const itv = loadIntervencion();
+    
     if (itv) {
-      syncDraftFromTube(); // 👈 precarga si estás editando
+      syncDraftFromTube(); // Cargar datos guardados del tubo actual
+      
       const numeroTuboSpan = document.getElementById('numero-tubo');
       if (numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
+
+      // ----------------------------------------------------
+      // LÓGICA DE PRESELECCIÓN (CO)
+      // ----------------------------------------------------
+      const desgaste = itv.draft.desgasteColor;   // viene de Desgaste.html
+      const corrosion = itv.draft.corrosionColor; // viene de Corrosion.html
+
+      // Verificamos si ambos son 'amarillo' (G2)
+      if (desgaste === 'amarillo' && corrosion === 'amarillo') {
+        
+        // Buscamos todos los botones de tipo
+        const botones = document.querySelectorAll('.tipo-btn');
+        
+        botones.forEach(btn => {
+          // Si el texto dentro del botón es exactamente "CO"
+          if (btn.textContent.trim() === 'CO') {
+            btn.classList.add('sugerido'); // Aplicamos la clase CSS
+          }
+        });
+      }
+      // ----------------------------------------------------
     }
 
-    /* ===== Guardar TIPO y navegar ===== */
+    /* ===== Guardar TIPO y navegar a Cupla ===== */
     document.querySelectorAll('.tipo-btn').forEach(a => {
       a.addEventListener('click', (e) => {
         e.preventDefault();
 
-        const code = e.currentTarget.textContent.trim(); // CO, DG, etc.
+        const code = e.currentTarget.textContent.trim(); // Ej: CO, DG, etc.
         const itv2 = loadIntervencion(); if (!itv2) return;
 
         itv2.draft.tipo = code;
         saveIntervencion(itv2);
 
-        // NUEVO: persistir por tubo
+        // Guardar cambios en el array maestro de tubos
         syncTubeFromDraft();
 
         pushEvento('tipoSeleccionado', { tipo: code });
@@ -119,5 +142,6 @@
       });
     });
   </script>
+  
 </body>
 </html>

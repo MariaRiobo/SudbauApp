@@ -99,23 +99,59 @@
     }
 
     /* ===== Selección de color → guarda draft y navega ===== */
+    /* ===== Selección de color → guarda draft y lógica de salto ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
       a.addEventListener('click', (e) => {
-        e.preventDefault();
+        if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
 
+        e.preventDefault();
         const cls = e.currentTarget.className.split(/\s+/);
-        const color = ['amarillo','azul','verde','rojo','blanco'].find(c => cls.includes(c)) || 'desconocido';
+        // 1. Detectamos el color actual (Corrosión)
+        const colorCorrosion = ['amarillo','azul','verde','rojo','blanco'].find(c => cls.includes(c)) || 'desconocido';
 
         const itv2 = loadIntervencion(); if (!itv2) return;
-        itv2.draft.corrosionColor = color;
-        saveIntervencion(itv2);
 
-        // NUEVO: persistir también por tubo en tubos[]
-        syncTubeFromDraft();
+        // 2. Guardamos el color de corrosión
+        itv2.draft.corrosionColor = colorCorrosion;
+        
+        // 3. Leemos el color de desgaste que guardaste en la página anterior
+        const colorDesgaste = itv2.draft.desgasteColor; 
 
-        pushEvento('corrosionSeleccionada', { color });
+        // ============================================================
+        // LÓGICA DE SALTO AUTOMÁTICO (Amarillo + Amarillo = CO)
+        // ============================================================
+        if (colorDesgaste === 'amarillo' && colorCorrosion === 'amarillo') {
+          
+          // A. Asignamos automáticamente el tipo "CO"
+          itv2.draft.tipo = 'CO';
+          
+          // B. Guardamos todo
+          saveIntervencion(itv2);
+          syncTubeFromDraft(); // Importante: guarda en el array general de tubos
+          
+          pushEvento('corrosionSeleccionada', { color: colorCorrosion });
+          pushEvento('tipoAutoSeleccionado', { tipo: 'CO', motivo: 'G2+G2' });
 
-        window.location.href = e.currentTarget.getAttribute('href'); // tipo.html
+          // C. SALTAMOS directo a Cupla.html (ignoramos Tipo.html)
+          window.location.href = 'Cupla.html';
+
+        } else {
+          // ============================================================
+          // LÓGICA NORMAL (Cualquier otra combinación)
+          // ============================================================
+          
+          // A. Limpiamos el tipo por si había uno viejo guardado (opcional, pero recomendado)
+          // itv2.draft.tipo = null; 
+
+          // B. Guardamos
+          saveIntervencion(itv2);
+          syncTubeFromDraft();
+
+          pushEvento('corrosionSeleccionada', { color: colorCorrosion });
+
+          // C. Vamos a la pantalla de selección de Tipo
+          window.location.href = 'Tipo.html';
+        }
       });
     });
   </script>

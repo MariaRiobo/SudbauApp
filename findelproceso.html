@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fin del proceso</title>
   <link rel="stylesheet" href="css/app.css">
+
   <style>
     .card{
       background:#fff;
@@ -42,6 +43,28 @@
       transform:none;
     }
   </style>
+
+  <!-- ✅ Firebase (Firestore) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067",
+      measurementId: "G-8XY511E3JL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Lo exponemos para el script normal
+    window.SUDBAU_DB = db;
+  </script>
 </head>
 
 <body>
@@ -68,6 +91,12 @@
   </div>
 
   <script>
+    /* =========================================================
+      ✅ CONFIG: Sheet.best endpoint
+    ========================================================= */
+    const SHEETBEST_URL = "https://api.sheetbest.com/sheets/39f795ed-d2b5-429a-8026-4cd586a9597b";
+
+    /* ===== LocalStorage helpers ===== */
     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
       if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
@@ -123,34 +152,242 @@
       const idx = Number(sel.value);
       const t = tubos[idx];
 
-      // 1) Activar modo edición
       localStorage.setItem('editMode', 'true');
       localStorage.setItem('editTubeIndex', String(idx));
-      localStorage.setItem('lastPage', 'findelproceso.html');
+      localStorage.setItem('lastPage', 'findeproceso.html');
 
-      // 2) Poner tuboActual en el elegido y precargar draft
       const itv2 = loadIntervencion();
       itv2.tuboActual = idx + 1;
       itv2.draft = (t && t.draft) ? { ...t.draft } : {};
       saveIntervencion(itv2);
 
-      // 3) Volver al loop
       window.location.href = 'Desgaste.html';
     });
 
-    // ===== Finalizar definitivamente =====
-    document.getElementById('btnCerrar').addEventListener('click', () => {
-      const ok = confirm('¿Finalizar definitivamente? Esto cerrará la intervención.');
+    /* =========================================================
+      ✅ Eventos POR TUBO
+      (así no te “replica” la justificación a todos)
+    ========================================================= */
+    function eventosDeTubo(itv, tuboNro){
+      const eventos = Array.isArray(itv?.eventos) ? itv.eventos : [];
+      return eventos.filter(e => Number(e.tubo) === Number(tuboNro));
+    }
+
+    function contarEventosDeTubo(itv, tuboNro){
+      const eventos = eventosDeTubo(itv, tuboNro);
+      const paradas = eventos.filter(e => e.tipo === "parada");
+      const justificaciones = eventos.filter(e => e.tipo === "justificacion");
+
+      const textos = justificaciones
+        .map(j => (j.texto || "").toString().trim())
+        .filter(Boolean);
+
+      return {
+        paradasCount: paradas.length,
+        justificaciones: textos
+      };
+    }
+
+    // helper para sacar campos aunque cambien de nombre
+    function pickFirst(obj, keys) {
+      for (const k of keys) {
+        const v = obj?.[k];
+        if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+      }
+      return "";
+    }
+
+    // ===== Guardar en Firestore (Firebase) =====
+    async function guardarEnFirestore(payload, docIdAmigable) {
+      const { doc, setDoc, collection, serverTimestamp } = await import(
+        "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js"
+      );
+
+      const db = window.SUDBAU_DB;
+      if (!db) throw new Error("Firestore no inicializado (window.SUDBAU_DB es undefined)");
+
+      const ref = doc(collection(db, "inspecciones"), docIdAmigable);
+
+      await setDoc(ref, {
+        ...payload,
+        createdAt: serverTimestamp()
+      });
+
+      return ref.id;
+    }
+
+    // ✅ Genera un ID amigable (SUD-YYYYMMDD-HHMMSS)
+    function generarIdAmigable() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      const ss = String(d.getSeconds()).padStart(2, '0');
+      return `SUD-${y}${m}${day}-${hh}${mm}${ss}`;
+    }
+
+    /* =========================================================
+      ✅ SHEET.BEST: 1 fila = 1 tubo
+      Tus columnas:
+      A Tubo nro
+      B Id
+      C createdAt
+      D fecha
+      E cliente
+      F pozo
+      G area
+      H ot
+      I operador
+      J ayudante
+      K solicitado
+      L tubosCount
+      M paradasCount   (POR TUBO)
+      N justificaciones (POR TUBO)
+      O Desgaste
+      P Corrosión
+      Q Tipo
+      R Cupla
+    ========================================================= */
+    async function enviarASheetBestFilas(filas) {
+      const resp = await fetch(SHEETBEST_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(filas)
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text().catch(()=> "");
+        throw new Error("Sheet.best respondió " + resp.status + " " + txt);
+      }
+    }
+
+    // arma las filas en el formato que espera sheet.best: array de objetos con claves = nombres de columnas
+    function buildSheetBestRows(docId, itvGuardada, tubosGuardados) {
+      const createdAtISO = new Date().toISOString();
+      const tubosCount = Array.isArray(tubosGuardados) ? tubosGuardados.length : 0;
+
+      const rows = (Array.isArray(tubosGuardados) ? tubosGuardados : []).map(t => {
+        const d = t?.draft || {};
+
+        // eventos POR TUBO
+        const ev = contarEventosDeTubo(itvGuardada, t.nro);
+        const justifStr = Array.isArray(ev.justificaciones) ? ev.justificaciones.join(" | ") : "";
+
+        // desgaste/corrosión: cubrimos ambos nombres
+        const desgaste = pickFirst(d, ["desgaste", "desgasteColor", "desgasteValor", "gradoDesgaste"]);
+        const corrosion = pickFirst(d, ["corrosion", "corrosionColor", "corrosionValor", "gradoCorrosion"]);
+
+        // cupla: intentamos varias claves típicas
+        const cupla = pickFirst(d, ["cupla", "cuplaResultado", "cuplaEstado", "cuplaValor", "cuplaOK", "cuplaOk", "cuplaSeleccion"]);
+
+        return {
+          "Tubo nro": t.nro || "",
+          "Id": docId,
+          "createdAt": createdAtISO,
+          "fecha": itvGuardada.fecha || "",
+          "cliente": itvGuardada.cliente || "",
+          "pozo": itvGuardada.pozo || "",
+          "area": itvGuardada.area || "",
+          "ot": itvGuardada.ot || "",
+          "operador": itvGuardada.operador || "",
+          "ayudante": itvGuardada.ayudante || "",
+          "solicitado": itvGuardada.solicitado || "",
+          "tubosCount": tubosCount,
+
+          // ✅ POR TUBO
+          "paradasCount": ev.paradasCount || 0,
+          "justificaciones": justifStr,
+
+          "Desgaste": desgaste || "",
+          "Corrosión": corrosion || "",
+          "Tipo": d.tipo || "",
+
+          // ✅ Cupla (si sigue vacío, es porque tu app lo guarda con otro nombre)
+          "Cupla": cupla || ""
+        };
+      });
+
+      // si no hay tubos, igual mandamos una fila mínima
+      if (rows.length === 0) {
+        rows.push({
+          "Tubo nro": "",
+          "Id": docId,
+          "createdAt": createdAtISO,
+          "fecha": itvGuardada?.fecha || "",
+          "cliente": itvGuardada?.cliente || "",
+          "pozo": itvGuardada?.pozo || "",
+          "area": itvGuardada?.area || "",
+          "ot": itvGuardada?.ot || "",
+          "operador": itvGuardada?.operador || "",
+          "ayudante": itvGuardada?.ayudante || "",
+          "solicitado": itvGuardada?.solicitado || "",
+          "tubosCount": 0,
+          "paradasCount": 0,
+          "justificaciones": "",
+          "Desgaste": "",
+          "Corrosión": "",
+          "Tipo": "",
+          "Cupla": ""
+        });
+      }
+
+      return rows;
+    }
+
+    // ===== Finalizar definitivamente (GUARDA + SHEETBEST + LIMPIA) =====
+    document.getElementById('btnCerrar').addEventListener('click', async () => {
+      const ok = confirm('¿Finalizar definitivamente? Esto guardará la intervención en Firebase y la cerrará.');
       if (!ok) return;
 
-      // limpiar todo lo de la intervención
-      localStorage.removeItem('intervencionActual');
-      localStorage.removeItem('tubos');
-      localStorage.removeItem('editMode');
-      localStorage.removeItem('editTubeIndex');
-      localStorage.removeItem('lastPage');
+      const btnCerrar = document.getElementById('btnCerrar');
+      btnCerrar.disabled = true;
 
-      window.location.href = 'InicioSesion.html';
+      try {
+        const itvGuardada = JSON.parse(localStorage.getItem('intervencionActual') || 'null');
+        const tubosGuardados = JSON.parse(localStorage.getItem('tubos') || '[]');
+        if (!itvGuardada) throw new Error("No hay intervencionActual en localStorage");
+
+        // Firestore (como venías)
+        const payload = {
+          cliente: itvGuardada.cliente || "",
+          fecha: itvGuardada.fecha || "",
+          area: itvGuardada.area || "",
+          pozo: itvGuardada.pozo || "",
+          ot: itvGuardada.ot || "",
+          operador: itvGuardada.operador || "",
+          ayudante: itvGuardada.ayudante || "",
+          solicitado: itvGuardada.solicitado || "",
+          tubosCount: Array.isArray(tubosGuardados) ? tubosGuardados.length : 0,
+          intervencion: itvGuardada,
+          tubos: tubosGuardados
+        };
+
+        const docId = generarIdAmigable();
+
+        // 1) Guardar en Firestore
+        const id = await guardarEnFirestore(payload, docId);
+
+        // 2) Mandar a Sheet.best (1 fila por tubo, con eventos POR TUBO)
+        const filas = buildSheetBestRows(id, itvGuardada, tubosGuardados);
+        await enviarASheetBestFilas(filas);
+
+        alert("✅ Guardado en Firebase y enviado a Google Sheets. ID: " + id);
+
+        // 3) Limpiar localStorage
+        localStorage.removeItem('intervencionActual');
+        localStorage.removeItem('tubos');
+        localStorage.removeItem('editMode');
+        localStorage.removeItem('editTubeIndex');
+        localStorage.removeItem('lastPage');
+
+        window.location.href = 'InicioSesion.html';
+      } catch (e) {
+        console.error(e);
+        btnCerrar.disabled = false;
+        alert("❌ No se pudo guardar/enviar. Mirá la consola (F12) para ver el error.");
+      }
     });
   </script>
 </body>

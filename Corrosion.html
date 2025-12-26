@@ -23,11 +23,11 @@
     </div>
 
     <div class="botones-container">
-      <a href="tipo.html" class="btn-color amarillo">G2</a>
-      <a href="tipo.html" class="btn-color azul">G3</a>
-      <a href="tipo.html" class="btn-color verde">G4</a>
-      <a href="tipo.html" class="btn-color rojo">G5</a>
-      <a href="tipo.html" class="btn-color blanco">UNGRADE</a>
+      <a href="Tipo.html" class="btn-color amarillo">G2</a>
+      <a href="Tipo.html" class="btn-color azul">G3</a>
+      <a href="Tipo.html" class="btn-color verde">G4</a>
+      <a href="Tipo.html" class="btn-color rojo">G5</a>
+      <a href="Tipo.html" class="btn-color blanco">UNGRADE</a>
     </div>
 
     <div class="controles">
@@ -59,7 +59,7 @@
       saveIntervencion(itv);
     }
 
-    /* ===== NUEVO: helpers para tubos[] ===== */
+    /* ===== Helpers para tubos[] ===== */
     function loadTubes() {
       return JSON.parse(localStorage.getItem('tubos') || '[]');
     }
@@ -93,63 +93,67 @@
     // Mostrar número de tubo + precargar draft del tubo
     const itv = loadIntervencion();
     if (itv) {
-      syncDraftFromTube(); // NUEVO
+      syncDraftFromTube();
       const numeroTubo = document.getElementById('numero-tubo');
       if (numeroTubo) numeroTubo.textContent = itv.tuboActual;
     }
 
-    /* ===== Selección de color → guarda draft y navega ===== */
-    /* ===== Selección de color → guarda draft y lógica de salto ===== */
+    /* =========================================================
+       ✅ CAMBIO: Guardar corrosión como G2/G3/G4/G5/UNGRADE
+       (la UI sigue usando colores para el estilo)
+    ========================================================= */
+    const GRADO_MAP = {
+      amarillo: 'G2',
+      azul: 'G3',
+      verde: 'G4',
+      rojo: 'G5',
+      blanco: 'UNGRADE'
+    };
+
+    /* ===== Selección → guarda draft y lógica de salto ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
       a.addEventListener('click', (e) => {
         if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
 
         e.preventDefault();
+
         const cls = e.currentTarget.className.split(/\s+/);
-        // 1. Detectamos el color actual (Corrosión)
-        const colorCorrosion = ['amarillo','azul','verde','rojo','blanco'].find(c => cls.includes(c)) || 'desconocido';
+        const colorCorrosion = Object.keys(GRADO_MAP).find(c => cls.includes(c));
+        const corrosion = GRADO_MAP[colorCorrosion] || 'UNGRADE';
 
-        const itv2 = loadIntervencion(); if (!itv2) return;
+        const itv2 = loadIntervencion(); 
+        if (!itv2) return;
 
-        // 2. Guardamos el color de corrosión
-        itv2.draft.corrosionColor = colorCorrosion;
-        
-        // 3. Leemos el color de desgaste que guardaste en la página anterior
-        const colorDesgaste = itv2.draft.desgasteColor; 
+        // ✅ Guardamos SOLO el código técnico de corrosión
+        itv2.draft.corrosion = corrosion;
+
+        // ✅ Leemos el código técnico de desgaste (ya cambiado en Desgaste.html)
+        const desgaste = itv2.draft.desgaste;
 
         // ============================================================
-        // LÓGICA DE SALTO AUTOMÁTICO (Amarillo + Amarillo = CO)
+        // LÓGICA DE SALTO AUTOMÁTICO (G2 + G2 = tipo CO)
         // ============================================================
-        if (colorDesgaste === 'amarillo' && colorCorrosion === 'amarillo') {
-          
-          // A. Asignamos automáticamente el tipo "CO"
+        if (desgaste === 'G2' && corrosion === 'G2') {
+
+          // A) Asignamos automáticamente el tipo "CO"
           itv2.draft.tipo = 'CO';
-          
-          // B. Guardamos todo
-          saveIntervencion(itv2);
-          syncTubeFromDraft(); // Importante: guarda en el array general de tubos
-          
-          pushEvento('corrosionSeleccionada', { color: colorCorrosion });
-          pushEvento('tipoAutoSeleccionado', { tipo: 'CO', motivo: 'G2+G2' });
 
-          // C. SALTAMOS directo a Cupla.html (ignoramos Tipo.html)
-          window.location.href = 'Cupla.html';
-
-        } else {
-          // ============================================================
-          // LÓGICA NORMAL (Cualquier otra combinación)
-          // ============================================================
-          
-          // A. Limpiamos el tipo por si había uno viejo guardado (opcional, pero recomendado)
-          // itv2.draft.tipo = null; 
-
-          // B. Guardamos
+          // B) Guardamos
           saveIntervencion(itv2);
           syncTubeFromDraft();
 
-          pushEvento('corrosionSeleccionada', { color: colorCorrosion });
+          pushEvento('corrosionSeleccionada', { corrosion });
+          pushEvento('tipoAutoSeleccionado', { tipo: 'CO', motivo: 'G2+G2' });
 
-          // C. Vamos a la pantalla de selección de Tipo
+          // C) Saltamos directo a Cupla.html
+          window.location.href = 'Cupla.html';
+
+        } else {
+
+          saveIntervencion(itv2);
+          syncTubeFromDraft();
+
+          pushEvento('corrosionSeleccionada', { corrosion });
           window.location.href = 'Tipo.html';
         }
       });

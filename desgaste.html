@@ -31,7 +31,7 @@
       font-family: "Noto Sans", sans-serif;
       font-size: 14px;
       text-transform: uppercase;
-      box-sizing: border-box;
+      box-sizing:border-box;
     }
     .justificacion-container textarea{
       width: 100%;
@@ -311,23 +311,41 @@
       pushEvento('arranque');
     });
 
-    /* ===== Selección de color → guarda draft y navega ===== */
+    /* =========================================================
+       ✅ CAMBIO: Guardar desgaste como G2/G3/G4/G5/UNGRADE
+       (la UI sigue usando colores para el estilo)
+    ========================================================= */
+    const DESGASTE_MAP = {
+      amarillo: 'G2',
+      azul: 'G3',
+      verde: 'G4',
+      rojo: 'G5',
+      blanco: 'UNGRADE'
+    };
+
+    /* ===== Selección → guarda draft y navega ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
       a.addEventListener('click', (e) => {
         if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
 
         e.preventDefault();
-        const cls = e.currentTarget.className.split(/\s+/);
-        const color = ['amarillo','azul','verde','rojo','blanco'].find(c => cls.includes(c)) || 'desconocido';
 
-        const itv2 = loadIntervencion(); if (!itv2) return;
-        itv2.draft.desgasteColor = color;
+        const cls = e.currentTarget.className.split(/\s+/);
+        const color = Object.keys(DESGASTE_MAP).find(c => cls.includes(c));
+        const desgaste = DESGASTE_MAP[color] || 'UNGRADE';
+
+        const itv2 = loadIntervencion(); 
+        if (!itv2) return;
+
+        // ✅ Guardamos SOLO el código técnico
+        itv2.draft.desgaste = desgaste;
         saveIntervencion(itv2);
 
-        // NUEVO: persistir también por tubo en tubos[]
+        // Persistir también por tubo en tubos[]
         syncTubeFromDraft();
 
-        pushEvento('desgasteSeleccionado', { color });
+        // Evento técnico
+        pushEvento('desgasteSeleccionado', { desgaste });
 
         window.location.href = e.currentTarget.getAttribute('href'); // Corrosion.html
       });

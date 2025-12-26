@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+
   <style>
     .desactivado, .desactivado:focus, .desactivado:hover {
       pointer-events: none;
@@ -54,6 +55,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header-corrosion">
@@ -84,7 +86,13 @@
 
       <label for="justificacion_lista">Justificación:</label>
 
-      <input type="text" id="justificacion_lista" list="justificaciones_opciones" placeholder="Seleccionar o escribir motivo..." autocomplete="off">
+      <input
+        type="text"
+        id="justificacion_lista"
+        list="justificaciones_opciones"
+        placeholder="Seleccionar o escribir motivo..."
+        autocomplete="off"
+      >
 
       <datalist id="justificaciones_opciones">
         <option value="ESPERA POR MANIOBRAS">
@@ -154,7 +162,7 @@
       saveIntervencion(itv);
     }
 
-    /* ===== NUEVO: helpers para tubos[] ===== */
+    /* ===== Tubos helpers ===== */
     function loadTubes() {
       return JSON.parse(localStorage.getItem('tubos') || '[]');
     }
@@ -166,22 +174,26 @@
       return tubes[idx];
     }
     function currentTubeIndex(itv) {
-      return Number(itv.tuboActual || 1) - 1; // tubo 1 => index 0
+      return Number(itv.tuboActual || 1) - 1;
     }
-    function syncDraftFromTube() {
-      const itv = loadIntervencion(); if (!itv) return;
+    function getCurrentTube() {
+      const itv = loadIntervencion(); if (!itv) return null;
       const tubes = loadTubes();
       const idx = currentTubeIndex(itv);
       const t = ensureTubeIndex(tubes, idx);
+      return { itv, tubes, idx, t };
+    }
+    function syncDraftFromTube() {
+      const pack = getCurrentTube(); if (!pack) return;
+      const { itv, t } = pack;
       itv.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
       saveIntervencion(itv);
     }
     function syncTubeFromDraft() {
-      const itv = loadIntervencion(); if (!itv) return;
-      const tubes = loadTubes();
-      const idx = currentTubeIndex(itv);
-      const t = ensureTubeIndex(tubes, idx);
+      const pack = getCurrentTube(); if (!pack) return;
+      const { tubes, idx, t, itv } = pack;
       t.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
+      tubes[idx] = t;
       saveTubes(tubes);
     }
 
@@ -190,7 +202,7 @@
     const numeroTuboSpan = document.getElementById('numero-tubo');
     if (itv && numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
 
-    // NUEVO: si venís a editar un tubo viejo, precargá el draft guardado
+    // precargar draft del tubo (modo edición etc.)
     if (itv) syncDraftFromTube();
 
     const justificacionContainer = document.querySelector('.justificacion-container');
@@ -208,6 +220,7 @@
     btnParada.addEventListener('click', () => {
       const now = new Date();
       fechaHoraSpan.textContent = now.toLocaleString();
+
       justificacionContainer.style.display = 'block';
 
       botonesColor.forEach(btn => btn.classList.add('desactivado'));
@@ -217,10 +230,21 @@
       btnParada.disabled = true;
       btnJustificar.disabled = true;
 
+      // ✅ evento por tubo
       pushEvento('parada');
+
+      // ✅ guardar ParadaAt por tubo
+      const pack = getCurrentTube();
+      if (pack) {
+        const { tubes, idx, t } = pack;
+        t.draft = t.draft || {};
+        t.draft.paradaAt = now.toISOString();
+        tubes[idx] = t;
+        saveTubes(tubes);
+      }
     });
 
-    // Evitar navegación en "Volver"
+    // Volver al tubo anterior
     btnVolver.addEventListener('click', (e) => {
       if (btnVolver.classList.contains('desactivado')) {
         e.preventDefault();
@@ -228,17 +252,21 @@
       }
       const itv = loadIntervencion();
       if (!itv) return;
+
       const actual = Number(itv.tuboActual || 1);
       const anterior = actual - 1;
+
       if (anterior < 1) {
         alert('Ya estás en el primer tubo. No se puede retroceder más.');
         return;
       }
       const confirmar = confirm(`Vas a volver al tubo anterior (Tubo Nº ${anterior}). ¿Querés continuar?`);
       if (!confirmar) return;
+
       itv.tuboActual = anterior;
       saveIntervencion(itv);
       pushEvento('volverACupla', { tuboDestino: anterior });
+
       window.location.href = 'Cupla.html';
     });
 
@@ -286,14 +314,31 @@
       } else {
         justificacionFinal = listaVal;
       }
+      if (!justificacionFinal) return;
 
-      if (justificacionFinal.length === 0) return;
+      // ✅ guardado técnico: "STANDBY - ..."
+      const guardado = `STANDBY - ${justificacionFinal}`;
 
+      // mostrar botón arranque
       btnArranque.style.display = 'block';
-      pushEvento('justificacion', { texto: justificacionFinal });
+
+      // evento por tubo
+      pushEvento('justificacion', { texto: guardado });
+
+      // guardar también en el draft del tubo (por si querés verlo desde ahí)
+      const pack = getCurrentTube();
+      if (pack) {
+        const { tubes, idx, t } = pack;
+        t.draft = t.draft || {};
+        t.draft.justificacion = guardado;
+        tubes[idx] = t;
+        saveTubes(tubes);
+      }
     });
 
     btnArranque.addEventListener('click', () => {
+      const now = new Date();
+
       botonesColor.forEach(btn => btn.classList.remove('desactivado'));
       btnVolver.classList.remove('desactivado');
       btnVolver.removeAttribute('aria-disabled');
@@ -305,15 +350,24 @@
       listaJustificacion.value = '';
       txtJustificacionOtros.value = '';
       txtJustificacionOtros.style.display = 'none';
-
       btnJustificar.disabled = true;
 
+      // ✅ evento por tubo
       pushEvento('arranque');
+
+      // ✅ guardar ArranqueAt por tubo
+      const pack = getCurrentTube();
+      if (pack) {
+        const { tubes, idx, t } = pack;
+        t.draft = t.draft || {};
+        t.draft.arranqueAt = now.toISOString();
+        tubes[idx] = t;
+        saveTubes(tubes);
+      }
     });
 
     /* =========================================================
-       ✅ CAMBIO: Guardar desgaste como G2/G3/G4/G5/UNGRADE
-       (la UI sigue usando colores para el estilo)
+      Guardar desgaste como G2/G3/G4/G5/UNGRADE (no colores)
     ========================================================= */
     const DESGASTE_MAP = {
       amarillo: 'G2',
@@ -323,31 +377,27 @@
       blanco: 'UNGRADE'
     };
 
-    /* ===== Selección → guarda draft y navega ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
       a.addEventListener('click', (e) => {
         if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
-
         e.preventDefault();
 
         const cls = e.currentTarget.className.split(/\s+/);
         const color = Object.keys(DESGASTE_MAP).find(c => cls.includes(c));
         const desgaste = DESGASTE_MAP[color] || 'UNGRADE';
 
-        const itv2 = loadIntervencion(); 
+        const itv2 = loadIntervencion();
         if (!itv2) return;
 
-        // ✅ Guardamos SOLO el código técnico
         itv2.draft.desgaste = desgaste;
         saveIntervencion(itv2);
 
-        // Persistir también por tubo en tubos[]
+        // persistir en tubos[]
         syncTubeFromDraft();
 
-        // Evento técnico
         pushEvento('desgasteSeleccionado', { desgaste });
 
-        window.location.href = e.currentTarget.getAttribute('href'); // Corrosion.html
+        window.location.href = e.currentTarget.getAttribute('href');
       });
     });
   </script>

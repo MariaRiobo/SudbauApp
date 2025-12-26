@@ -62,7 +62,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Lo exponemos para el script normal
     window.SUDBAU_DB = db;
   </script>
 </head>
@@ -92,7 +91,7 @@
 
   <script>
     /* =========================================================
-      ✅ CONFIG: Sheet.best endpoint
+      ✅ CONFIG: SheetBest URL
     ========================================================= */
     const SHEETBEST_URL = "https://api.sheetbest.com/sheets/39f795ed-d2b5-429a-8026-4cd586a9597b";
 
@@ -108,6 +107,9 @@
     function loadTubes(){
       return JSON.parse(localStorage.getItem('tubos') || '[]');
     }
+    function saveTubes(arr){
+      localStorage.setItem('tubos', JSON.stringify(arr));
+    }
 
     const itv = loadIntervencion();
     const tubos = loadTubes();
@@ -117,7 +119,6 @@
     if (itv && resumen) {
       resumen.innerHTML = `
         <b>${itv.cliente || ''}</b><br>
-        Fecha: ${itv.fecha || ''}<br>
         Área: ${itv.area || ''}<br>
         Pozo: ${itv.pozo || ''}<br>
         OT: ${itv.ot || ''}<br>
@@ -165,39 +166,44 @@
     });
 
     /* =========================================================
-      ✅ Eventos POR TUBO
-      (así no te “replica” la justificación a todos)
+      Eventos: agrupar por tubo para que no se copie en todos
     ========================================================= */
-    function eventosDeTubo(itv, tuboNro){
-      const eventos = Array.isArray(itv?.eventos) ? itv.eventos : [];
-      return eventos.filter(e => Number(e.tubo) === Number(tuboNro));
+    function getEventos() {
+      const itv = loadIntervencion();
+      return Array.isArray(itv?.eventos) ? itv.eventos : [];
     }
 
-    function contarEventosDeTubo(itv, tuboNro){
-      const eventos = eventosDeTubo(itv, tuboNro);
-      const paradas = eventos.filter(e => e.tipo === "parada");
-      const justificaciones = eventos.filter(e => e.tipo === "justificacion");
+    function agruparEventosPorTubo(eventos) {
+      const map = new Map();
+      for (const e of eventos) {
+        const tuboNro = Number(e.tubo || 0);
+        if (!tuboNro) continue;
 
-      const textos = justificaciones
-        .map(j => (j.texto || "").toString().trim())
-        .filter(Boolean);
+        if (!map.has(tuboNro)) map.set(tuboNro, { paradas: 0, justifs: [], paradasAt: [], arranquesAt: [] });
+        const acc = map.get(tuboNro);
 
-      return {
-        paradasCount: paradas.length,
-        justificaciones: textos
-      };
-    }
-
-    // helper para sacar campos aunque cambien de nombre
-    function pickFirst(obj, keys) {
-      for (const k of keys) {
-        const v = obj?.[k];
-        if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+        if (e.tipo === 'parada') {
+          acc.paradas += 1;
+          if (e.at) acc.paradasAt.push(e.at);
+        }
+        if (e.tipo === 'justificacion') {
+          const txt = (e.texto || "").toString().trim();
+          if (txt) acc.justifs.push(txt);
+        }
+        if (e.tipo === 'arranque') {
+          if (e.at) acc.arranquesAt.push(e.at);
+        }
       }
-      return "";
+      return map;
     }
 
-    // ===== Guardar en Firestore (Firebase) =====
+    function ultimo(arr) {
+      return Array.isArray(arr) && arr.length ? arr[arr.length - 1] : "";
+    }
+
+    /* =========================================================
+      ✅ Firestore
+    ========================================================= */
     async function guardarEnFirestore(payload, docIdAmigable) {
       const { doc, setDoc, collection, serverTimestamp } = await import(
         "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js"
@@ -216,7 +222,6 @@
       return ref.id;
     }
 
-    // ✅ Genera un ID amigable (SUD-YYYYMMDD-HHMMSS)
     function generarIdAmigable() {
       const d = new Date();
       const y = d.getFullYear();
@@ -229,114 +234,84 @@
     }
 
     /* =========================================================
-      ✅ SHEET.BEST: 1 fila = 1 tubo
-      Tus columnas:
-      A Tubo nro
-      B Id
-      C createdAt
-      D fecha
-      E cliente
-      F pozo
-      G area
-      H ot
-      I operador
-      J ayudante
-      K solicitado
-      L tubosCount
-      M paradasCount   (POR TUBO)
-      N justificaciones (POR TUBO)
-      O Desgaste
-      P Corrosión
-      Q Tipo
-      R Cupla
+      ✅ SheetBest: 1 fila por tubo
+      (sin fecha)
+      Columnas sugeridas:
+      Tubo nro | Id | createdAt | cliente | pozo | area | ot | operador | ayudante | solicitado
+      | tubosCount | paradasCount | ParadaAt | ArranqueAt | justificaciones
+      | Desgaste | Corrosión | Tipo | Cupla
     ========================================================= */
-    async function enviarASheetBestFilas(filas) {
+    async function enviarFilaSheetBest(obj) {
       const resp = await fetch(SHEETBEST_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(filas)
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(obj)
       });
 
       if (!resp.ok) {
-        const txt = await resp.text().catch(()=> "");
-        throw new Error("Sheet.best respondió " + resp.status + " " + txt);
+        const txt = await resp.text().catch(() => "");
+        throw new Error(`SheetBest error ${resp.status} ${txt}`);
       }
     }
 
-    // arma las filas en el formato que espera sheet.best: array de objetos con claves = nombres de columnas
-    function buildSheetBestRows(docId, itvGuardada, tubosGuardados) {
+    async function enviarReporteASheets(docId) {
+      const itv = loadIntervencion();
+      const tubos = loadTubes();
+      const eventos = getEventos();
+      const eventosPorTubo = agruparEventosPorTubo(eventos);
+
       const createdAtISO = new Date().toISOString();
-      const tubosCount = Array.isArray(tubosGuardados) ? tubosGuardados.length : 0;
+      const tubosCount = Array.isArray(tubos) ? tubos.length : 0;
 
-      const rows = (Array.isArray(tubosGuardados) ? tubosGuardados : []).map(t => {
-        const d = t?.draft || {};
+      for (const t of tubos) {
+        const d = (t && t.draft) ? t.draft : {};
+        const acc = eventosPorTubo.get(Number(t.nro)) || { paradas: 0, justifs: [], paradasAt: [], arranquesAt: [] };
 
-        // eventos POR TUBO
-        const ev = contarEventosDeTubo(itvGuardada, t.nro);
-        const justifStr = Array.isArray(ev.justificaciones) ? ev.justificaciones.join(" | ") : "";
+        // Por tubo
+        const paradasCount = acc.paradas || 0;
 
-        // desgaste/corrosión: cubrimos ambos nombres
-        const desgaste = pickFirst(d, ["desgaste", "desgasteColor", "desgasteValor", "gradoDesgaste"]);
-        const corrosion = pickFirst(d, ["corrosion", "corrosionColor", "corrosionValor", "gradoCorrosion"]);
+        // ✅ ParadaAt / ArranqueAt: prioridad draft.*At (por tubo), fallback eventos
+        const paradaAt = d.paradaAt || ultimo(acc.paradasAt) || "";
+        const arranqueAt = d.arranqueAt || ultimo(acc.arranquesAt) || "";
 
-        // cupla: intentamos varias claves típicas
-        const cupla = pickFirst(d, ["cupla", "cuplaResultado", "cuplaEstado", "cuplaValor", "cuplaOK", "cuplaOk", "cuplaSeleccion"]);
+        // ✅ justificaciones por tubo (ya vienen como "STANDBY - ...")
+        // si también guardaste draft.justificacion, lo incluimos sin duplicar
+        const justifs = Array.isArray(acc.justifs) ? [...acc.justifs] : [];
+        if (d.justificacion && !justifs.includes(d.justificacion)) justifs.push(d.justificacion);
+        const justificaciones = justifs.join(" | ");
 
-        return {
+        const fila = {
           "Tubo nro": t.nro || "",
           "Id": docId,
           "createdAt": createdAtISO,
-          "fecha": itvGuardada.fecha || "",
-          "cliente": itvGuardada.cliente || "",
-          "pozo": itvGuardada.pozo || "",
-          "area": itvGuardada.area || "",
-          "ot": itvGuardada.ot || "",
-          "operador": itvGuardada.operador || "",
-          "ayudante": itvGuardada.ayudante || "",
-          "solicitado": itvGuardada.solicitado || "",
+
+          "cliente": itv?.cliente || "",
+          "pozo": itv?.pozo || "",
+          "area": itv?.area || "",
+          "ot": itv?.ot || "",
+          "operador": itv?.operador || "",
+          "ayudante": itv?.ayudante || "",
+          "solicitado": itv?.solicitado || "",
+
           "tubosCount": tubosCount,
+          "paradasCount": paradasCount,
 
-          // ✅ POR TUBO
-          "paradasCount": ev.paradasCount || 0,
-          "justificaciones": justifStr,
+          "ParadaAt": paradaAt,
+          "ArranqueAt": arranqueAt,
 
-          "Desgaste": desgaste || "",
-          "Corrosión": corrosion || "",
+          "justificaciones": justificaciones,
+
+          "Desgaste": d.desgaste || "",
+          "Corrosión": d.corrosion || "",
           "Tipo": d.tipo || "",
-
-          // ✅ Cupla (si sigue vacío, es porque tu app lo guarda con otro nombre)
-          "Cupla": cupla || ""
+          "Cupla": d.cupla_status || d.cupla || ""
         };
-      });
 
-      // si no hay tubos, igual mandamos una fila mínima
-      if (rows.length === 0) {
-        rows.push({
-          "Tubo nro": "",
-          "Id": docId,
-          "createdAt": createdAtISO,
-          "fecha": itvGuardada?.fecha || "",
-          "cliente": itvGuardada?.cliente || "",
-          "pozo": itvGuardada?.pozo || "",
-          "area": itvGuardada?.area || "",
-          "ot": itvGuardada?.ot || "",
-          "operador": itvGuardada?.operador || "",
-          "ayudante": itvGuardada?.ayudante || "",
-          "solicitado": itvGuardada?.solicitado || "",
-          "tubosCount": 0,
-          "paradasCount": 0,
-          "justificaciones": "",
-          "Desgaste": "",
-          "Corrosión": "",
-          "Tipo": "",
-          "Cupla": ""
-        });
+        await enviarFilaSheetBest(fila);
       }
-
-      return rows;
     }
 
-    // ===== Finalizar definitivamente (GUARDA + SHEETBEST + LIMPIA) =====
+    // ===== Finalizar definitivamente (GUARDA + SHEETS + LIMPIA) =====
     document.getElementById('btnCerrar').addEventListener('click', async () => {
       const ok = confirm('¿Finalizar definitivamente? Esto guardará la intervención en Firebase y la cerrará.');
       if (!ok) return;
@@ -349,10 +324,8 @@
         const tubosGuardados = JSON.parse(localStorage.getItem('tubos') || '[]');
         if (!itvGuardada) throw new Error("No hay intervencionActual en localStorage");
 
-        // Firestore (como venías)
         const payload = {
           cliente: itvGuardada.cliente || "",
-          fecha: itvGuardada.fecha || "",
           area: itvGuardada.area || "",
           pozo: itvGuardada.pozo || "",
           ot: itvGuardada.ot || "",
@@ -369,9 +342,8 @@
         // 1) Guardar en Firestore
         const id = await guardarEnFirestore(payload, docId);
 
-        // 2) Mandar a Sheet.best (1 fila por tubo, con eventos POR TUBO)
-        const filas = buildSheetBestRows(id, itvGuardada, tubosGuardados);
-        await enviarASheetBestFilas(filas);
+        // 2) Enviar a Sheets (SheetBest)
+        await enviarReporteASheets(id);
 
         alert("✅ Guardado en Firebase y enviado a Google Sheets. ID: " + id);
 

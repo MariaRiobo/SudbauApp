@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel Usuario</title>
+  <link rel="stylesheet" href="css/app.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --blue:#0055AA;
+      --blue-dark:#05145A;
+      --border:#CDCDDC;
+      --bg:#05145A;
+      --bg2:#0A1C4D;
+      --card:#fff;
+      --muted:#6b78a8;
+    }
+
+    body{
+      margin:0;
+      font-family:"Noto Sans", sans-serif;
+      background: var(--bg);
+      color: var(--blue-dark);
+    }
+
+    .wrap{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      box-sizing:border-box;
+    }
+
+    .panel{
+      width:min(1100px, 100%);
+      background:var(--card);
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:0 12px 26px rgba(0,0,0,.18);
+      padding:16px;
+      box-sizing:border-box;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      padding-bottom:12px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:12px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .brand img{
+      height:34px;
+      width:auto;
+      object-fit:contain;
+    }
+
+    .title{
+      font-family:"Kanit", sans-serif;
+      margin:0;
+      font-size:22px;
+      color:var(--blue-dark);
+      line-height:1.1;
+    }
+
+    .subtitle{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      background:var(--blue);
+      color:#fff;
+      border:none;
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-family:"Kanit", sans-serif;
+      font-size:14px;
+      box-shadow:0 10px 18px rgba(0,85,170,.18);
+    }
+
+    .btn-secondary{
+      background:#E9F3FF;
+      color:var(--blue-dark);
+      border:1px solid rgba(0,85,170,.25);
+      box-shadow:none;
+    }
+
+    .chips{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin: 6px 0 10px;
+    }
+
+    .chip{
+      background:#E9F3FF;
+      border:1px solid rgba(0,85,170,.25);
+      color:var(--blue-dark);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .chip strong{ font-family:"Kanit", sans-serif; font-weight:600; }
+
+    .status{
+      margin:12px 0;
+      padding:10px 12px;
+      background:#F6F8FF;
+      border:1px solid var(--border);
+      border-radius:12px;
+      color:var(--blue-dark);
+      font-size:13px;
+    }
+
+    /* ===== Tabla desktop ===== */
+    .table-wrap{
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:12px;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:900px;
+    }
+
+    thead th{
+      position:sticky;
+      top:0;
+      background:#E9F3FF;
+      color:var(--blue-dark);
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      border-bottom:1px solid var(--border);
+      padding:10px 10px;
+      text-align:left;
+      z-index:1;
+    }
+
+    tbody td{
+      border-top:1px solid #EFEFF4;
+      padding:10px 10px;
+      font-size:13px;
+      color:var(--blue-dark);
+      vertical-align:top;
+    }
+
+    tbody tr:hover td{ background:#FAFBFF; }
+
+    .muted{ color:var(--muted); }
+
+    .pill{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      white-space:nowrap;
+    }
+    .pill-ok{ border-color: rgba(0,150,90,.35); background: rgba(0,150,90,.08); }
+    .pill-warn{ border-color: rgba(210,120,0,.35); background: rgba(210,120,0,.08); }
+
+    .empty{
+      padding:16px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    /* ===== Responsive mobile: tabla -> cards ===== */
+    @media (max-width: 720px){
+      .wrap{ padding:12px; align-items:flex-start; }
+      .panel{ padding:14px; }
+
+      .brand img{ height:30px; }
+      .title{ font-size:20px; }
+      .subtitle{ font-size:12px; }
+
+      /* en mobile no necesitamos min-width gigante */
+      table{ min-width: 0; }
+
+      thead{ display:none; }
+      table, tbody, tr, td{ display:block; width:100%; }
+      .table-wrap{ border:none; overflow:visible; }
+
+      tbody tr{
+        margin: 12px 0;
+        border:1px solid var(--border);
+        border-radius:14px;
+        overflow:hidden;
+        box-shadow:0 10px 18px rgba(0,0,0,.06);
+      }
+
+      tbody td{
+        border-top:1px solid #EFEFF4;
+        padding:10px 12px;
+        display:flex;
+        gap:10px;
+        justify-content:space-between;
+        align-items:flex-start;
+      }
+
+      tbody td::before{
+        content: attr(data-label);
+        font-weight:700;
+        color:var(--blue-dark);
+        font-size:12px;
+        text-transform:uppercase;
+        letter-spacing:.02em;
+        flex: 0 0 42%;
+      }
+
+      tbody td > *{
+        flex: 1;
+        text-align:right;
+      }
+
+      /* primera fila (tubo) más “header” */
+      tbody td.tubo-cell{
+        background:#E9F3FF;
+        border-top:none;
+      }
+      tbody td.tubo-cell::before{ content:"TUBO"; }
+      tbody td.tubo-cell > *{ font-family:"Kanit", sans-serif; font-weight:600; }
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067",
+      measurementId: "G-8XY511E3JL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.SUDBAU_DB = db;
+  </script>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="topbar">
+        <div class="brand">
+          <img src="img/logoHorizontal.png" alt="Südbau" />
+          <div>
+            <h1 class="title">Panel Usuario</h1>
+            <p class="subtitle">Visualización en tiempo real de la inspección</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-secondary" id="btnCambiarEmpresa" type="button">Cambiar empresa</button>
+          <button class="btn" id="btnRefrescar" type="button">Refrescar</button>
+        </div>
+      </div>
+
+      <div class="chips">
+        <div class="chip">Empresa: <strong id="chipEmpresa">—</strong></div>
+        <div class="chip">Estado: <strong id="chipEstado">—</strong></div>
+        <div class="chip">Tubo actual: <strong id="chipTuboActual">—</strong></div>
+        <div class="chip">Última actualización: <strong id="chipLastUpdate">—</strong></div>
+        <div class="chip muted">Live ID: <strong id="chipLiveId">—</strong></div>
+      </div>
+
+      <div class="status" id="statusBox">Conectando…</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tubo</th>
+              <th>Desgaste</th>
+              <th>Corrosión</th>
+              <th>Tipo</th>
+              <th>Cupla</th>
+              <th>Completado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td class="empty" colspan="6">Esperando datos…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================
+       ✅ Seguridad mínima: si no hay sesión, volver al login
+       ========================== */
+    const sesion = JSON.parse(localStorage.getItem("usuarioView") || "null");
+    if (!sesion || sesion.role !== "usuario" || !sesion.empresa) {
+      window.location.replace("usuario.html");
+    }
+
+    function normEmpresa(s){ return (s || "").toString().trim().toUpperCase(); }
+
+    function getEmpresa(){
+      // pri: sesión
+      const s = JSON.parse(localStorage.getItem("usuarioView") || "null");
+      if (s && s.empresa) return normEmpresa(s.empresa);
+
+      // fallback
+      const ls = localStorage.getItem("usuarioEmpresa");
+      if (ls) return normEmpresa(ls);
+
+      // fallback url
+      const u = new URL(window.location.href);
+      const e = u.searchParams.get("empresa");
+      return e ? normEmpresa(e) : "";
+    }
+
+    function formatDate(d){
+      if (!d) return "—";
+      try { return new Date(d).toLocaleString(); } catch { return "—"; }
+    }
+
+    const statusBox = document.getElementById("statusBox");
+    const chipEmpresa = document.getElementById("chipEmpresa");
+    const chipEstado = document.getElementById("chipEstado");
+    const chipTuboActual = document.getElementById("chipTuboActual");
+    const chipLastUpdate = document.getElementById("chipLastUpdate");
+    const chipLiveId = document.getElementById("chipLiveId");
+    const tbody = document.getElementById("tbody");
+
+    const btnCambiarEmpresa = document.getElementById("btnCambiarEmpresa");
+    const btnRefrescar = document.getElementById("btnRefrescar");
+
+    let unsubscribeHeader = null;
+    let unsubscribeTubes = null;
+
+    function clearUnsubs(){
+      if (typeof unsubscribeHeader === "function") unsubscribeHeader();
+      if (typeof unsubscribeTubes === "function") unsubscribeTubes();
+      unsubscribeHeader = null;
+      unsubscribeTubes = null;
+    }
+
+    function setStatus(msg){ statusBox.textContent = msg; }
+
+    function renderEmpty(msg){
+      tbody.innerHTML = `<tr><td class="empty" colspan="6">${msg}</td></tr>`;
+    }
+
+    function renderRows(rows){
+      tbody.innerHTML = "";
+      if (!rows.length) {
+        renderEmpty("Todavía no hay tubos subidos.");
+        return;
+      }
+
+      for (const r of rows) {
+        const cuplaHumana =
+          r.cupla_status === "buena" ? "BUENA" :
+          r.cupla_status === "defectuosa" ? "DEFECTUOSA" :
+          (r.cupla_status || "");
+
+        const pillCupla = cuplaHumana
+          ? `<span class="pill ${cuplaHumana === "BUENA" ? "pill-ok" : "pill-warn"}">${cuplaHumana}</span>`
+          : `<span class="muted">—</span>`;
+
+        const completado = r.completedAt ? formatDate(r.completedAt) : "—";
+
+        const tr = document.createElement("tr");
+
+        const tdTubo = document.createElement("td");
+        tdTubo.className = "tubo-cell";
+        tdTubo.setAttribute("data-label", "Tubo");
+        tdTubo.innerHTML = `<strong>${r.tuboNro ?? "—"}</strong>`;
+
+        const tdDesg = document.createElement("td");
+        tdDesg.setAttribute("data-label", "Desgaste");
+        tdDesg.textContent = r.desgaste || "—";
+
+        const tdCorr = document.createElement("td");
+        tdCorr.setAttribute("data-label", "Corrosión");
+        tdCorr.textContent = r.corrosion || "—";
+
+        const tdTipo = document.createElement("td");
+        tdTipo.setAttribute("data-label", "Tipo");
+        tdTipo.textContent = r.tipo || "—";
+
+        const tdCupla = document.createElement("td");
+        tdCupla.setAttribute("data-label", "Cupla");
+        tdCupla.innerHTML = pillCupla;
+
+        const tdComp = document.createElement("td");
+        tdComp.setAttribute("data-label", "Completado");
+        tdComp.className = "muted";
+        tdComp.textContent = completado;
+
+        tr.appendChild(tdTubo);
+        tr.appendChild(tdDesg);
+        tr.appendChild(tdCorr);
+        tr.appendChild(tdTipo);
+        tr.appendChild(tdCupla);
+        tr.appendChild(tdComp);
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function conectarDashboard(){
+      clearUnsubs();
+
+      const empresa = getEmpresa();
+      chipEmpresa.textContent = empresa || "—";
+      chipEstado.textContent = "—";
+      chipTuboActual.textContent = "—";
+      chipLastUpdate.textContent = "—";
+      chipLiveId.textContent = "—";
+
+      if (!empresa) {
+        setStatus("No hay empresa seleccionada. Volvé y elegí empresa.");
+        renderEmpty("Sin empresa.");
+        return;
+      }
+
+      const db = window.SUDBAU_DB;
+      if (!db) {
+        setStatus("Firestore no inicializado.");
+        renderEmpty("Sin conexión a Firestore.");
+        return;
+      }
+
+      setStatus("Conectando a la última inspección en vivo…");
+
+      const { collection, query, where, orderBy, limit, onSnapshot } =
+        await import("https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js");
+
+      const qHeader = query(
+        collection(db, "inspecciones_live"),
+        where("cliente", "==", empresa),
+        orderBy("lastUpdateAt", "desc"),
+        limit(1)
+      );
+
+      unsubscribeHeader = onSnapshot(qHeader, (snap) => {
+        if (snap.empty) {
+          chipEstado.textContent = "—";
+          chipTuboActual.textContent = "—";
+          chipLastUpdate.textContent = "—";
+          chipLiveId.textContent = "—";
+          setStatus("No hay inspecciones en vivo para esa empresa (todavía).");
+          renderEmpty("Todavía no hay inspecciones en vivo para esta empresa.");
+          if (typeof unsubscribeTubes === "function") { unsubscribeTubes(); unsubscribeTubes = null; }
+          return;
+        }
+
+        const doc0 = snap.docs[0];
+        const header = doc0.data() || {};
+        const liveId = doc0.id;
+
+        chipLiveId.textContent = liveId;
+        chipEstado.textContent = header.estado || "EN_PROCESO";
+        chipTuboActual.textContent = (header.tuboActual ?? "—");
+        chipLastUpdate.textContent =
+          header.lastUpdateAt?.toDate ? header.lastUpdateAt.toDate().toLocaleString() : "—";
+
+        setStatus("Conectado. Escuchando tubos en tiempo real…");
+
+        const qTubes = query(
+          collection(db, "inspecciones_live", liveId, "tubos"),
+          orderBy("tuboNro", "asc")
+        );
+
+        if (typeof unsubscribeTubes === "function") unsubscribeTubes();
+
+        unsubscribeTubes = onSnapshot(qTubes, (tSnap) => {
+          const rows = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderRows(rows);
+        }, (err) => {
+          console.error(err);
+          setStatus("Error escuchando tubos (mirá consola).");
+          renderEmpty("Error de conexión con tubos.");
+        });
+
+      }, (err) => {
+        console.error(err);
+        setStatus("Error buscando inspección en vivo (mirá consola).");
+        renderEmpty("Error de conexión con inspección.");
+      });
+    }
+
+    /* ✅ Cambiar empresa: Corregido el retraso para evitar que se trabe */
+    btnCambiarEmpresa.addEventListener("click", (e) => {
+        e.preventDefault();
+        clearUnsubs();
+        localStorage.removeItem("usuarioView");
+        localStorage.removeItem("usuarioEmpresa");
+        
+        // Pequeño delay de 100ms para asegurar limpieza de memoria
+        setTimeout(() => {
+            window.location.href = "usuario.html";
+        }, 100);
+    });
+
+    btnRefrescar.addEventListener("click", () => {
+      conectarDashboard();
+    });
+
+    conectarDashboard();
+  </script>
+</body>
+</html>

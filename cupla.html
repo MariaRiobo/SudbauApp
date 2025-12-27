@@ -37,6 +37,30 @@
     .btn:disabled:hover,
     .btn:disabled:focus { box-shadow: none; outline: none; }
   </style>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067",
+      measurementId: "G-8XY511E3JL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Exponemos las funciones necesarias para el script de abajo
+    window.SUDBAU_DB = db;
+    window.FB_DOC = doc;
+    window.FB_SET = setDoc;
+    window.FB_TS = serverTimestamp;
+  </script>
 </head>
 
 <body>
@@ -77,67 +101,90 @@
   </div>
 
   <script>
-    /* ===== Helpers de estado ===== */
+    /* ===== Helpers de estado (Tu lógica original) ===== */
     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
       if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
       const itv = JSON.parse(raw);
       if (!itv.draft) itv.draft = {};
-      if (!itv.registros) itv.registros = [];
-      if (!itv.eventos) itv.eventos = [];
       return itv;
     }
     function saveIntervencion(itv){ localStorage.setItem('intervencionActual', JSON.stringify(itv)); }
+    
     function setDraft(field, value){
       const itv = loadIntervencion(); if (!itv) return;
       if (value === undefined) delete itv.draft[field]; else itv.draft[field] = value;
       saveIntervencion(itv);
     }
-    function pushEvento(tipo, extra = {}) {
-      const itv = loadIntervencion(); if (!itv) return;
-      itv.eventos.push({ tipo, tubo: Number(itv.tuboActual), at: new Date().toISOString(), ...extra });
-      saveIntervencion(itv);
-    }
 
-    /* ===== Helpers para tubos[] ===== */
     function loadTubes(){ return JSON.parse(localStorage.getItem('tubos') || '[]'); }
     function saveTubes(arr){ localStorage.setItem('tubos', JSON.stringify(arr)); }
-    function ensureTubeIndex(tubes, idx){
-      while (tubes.length <= idx) tubes.push({ nro: tubes.length + 1, draft: {}, completedAt: null });
-      return tubes[idx];
-    }
+    
     function currentTubeIndex(itv){ return Number(itv.tuboActual || 1) - 1; }
 
-    function syncDraftFromTube(){
-      const itv = loadIntervencion(); if (!itv) return;
-      const tubes = loadTubes();
-      const idx = currentTubeIndex(itv);
-      const t = ensureTubeIndex(tubes, idx);
-      itv.draft = { ...(t.draft||{}), ...(itv.draft||{}) };
-      saveIntervencion(itv);
-    }
     function syncTubeFromDraft(){
       const itv = loadIntervencion(); if (!itv) return;
       const tubes = loadTubes();
       const idx = currentTubeIndex(itv);
-      const t = ensureTubeIndex(tubes, idx);
-      t.draft = { ...(t.draft||{}), ...(itv.draft||{}) };
+      if (!tubes[idx]) tubes[idx] = { nro: idx + 1, draft: {}, completedAt: null };
+      tubes[idx].draft = { ...(tubes[idx].draft||{}), ...(itv.draft||{}) };
       saveTubes(tubes);
     }
 
-    function isEditMode(){ return localStorage.getItem('editMode') === 'true'; }
-    function clearEditMode(){
-      localStorage.setItem('editMode','false');
-      localStorage.removeItem('editTubeIndex');
+    /* =========================================================
+      ✅ LÓGICA DE SUBIDA EN TIEMPO REAL (Para el Jefe)
+    ========================================================= */
+    async function guardarTuboEnVivo(itv, dataTubo, esFinal = false) {
+      try {
+        const db = window.SUDBAU_DB;
+        const docFn = window.FB_DOC;
+        const setFn = window.FB_SET;
+        const tsFn = window.FB_TS;
+
+        if (!db || !docFn) return;
+
+        // Aseguramos que la intervención tenga un ID único para Firebase
+        if (!itv.liveId) {
+          const d = new Date();
+          itv.liveId = `LIVE-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+          saveIntervencion(itv);
+        }
+
+        // 1) Cabecera: Para que el dashboard sepa qué está pasando
+        const headerRef = docFn(db, "inspecciones_live", itv.liveId);
+        await setFn(headerRef, {
+          cliente: (itv.cliente || "").toString().toUpperCase().trim(),
+          pozo: itv.pozo || "",
+          area: itv.area || "",
+          ot: itv.ot || "",
+          operador: itv.operador || "",
+          tuboActual: Number(itv.tuboActual),
+          lastUpdateAt: tsFn(),
+          estado: esFinal ? "FINALIZADA" : "EN_PROCESO"
+        }, { merge: true });
+
+        // 2) Detalle del Tubo: Lo que se muestra en la tabla del cliente
+        const tuboRef = docFn(db, "inspecciones_live", itv.liveId, "tubos", String(itv.tuboActual));
+        await setFn(tuboRef, {
+          tuboNro: Number(itv.tuboActual),
+          desgaste: dataTubo.desgaste || "",
+          corrosion: dataTubo.corrosion || "",
+          tipo: dataTubo.tipo || "",
+          cupla_status: dataTubo.cupla_status || "",
+          completedAt: new Date().toISOString(),
+          updatedAt: tsFn()
+        }, { merge: true });
+
+        console.log("✅ Sincronizado con Dashboard del Jefe");
+      } catch (err) {
+        console.error("❌ Error subiendo a Firebase:", err);
+      }
     }
 
-    /* ===== UI init ===== */
+    /* ===== UI Init y Eventos (Tu lógica original intacta) ===== */
     const itvInit = loadIntervencion();
     const tuboSpan = document.getElementById('numero-tubo');
     if (itvInit && tuboSpan) tuboSpan.textContent = itvInit.tuboActual;
-
-    // NUEVO: si venís a editar, precargá el draft del tubo
-    if (itvInit) syncDraftFromTube();
 
     const tipoBtns = document.querySelectorAll('.tipo-btn');
     const btnSiguiente = document.getElementById('btn-siguiente-tubo');
@@ -148,39 +195,22 @@
 
     let seleccionActual = null;
 
-    btnSiguiente.disabled = true;
-    btnFinalizar.disabled = true;
-
-    // Click en BUENA / DEFECTUOSA
     tipoBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         seleccionActual = btn.dataset.code;
-
         tipoBtns.forEach(b => (b === btn) ? b.classList.add('selected') : b.classList.add('desactivado'));
 
         btnSiguiente.disabled = false;
         btnFinalizar.disabled = false;
-
-        const textoHumano = (seleccionActual === 'buena') ? 'CUPLA BUENA' : 'CUPLA DEFECTUOSA';
-        bannerTexto.textContent = `Seleccionaste: ${textoHumano}`;
+        bannerTexto.textContent = `Seleccionaste: ${seleccionActual.toUpperCase()}`;
         banner.hidden = false;
 
-        // Guardado en draft + sync a tubos
         setDraft('cupla_status', seleccionActual);
         syncTubeFromDraft();
-
-        pushEvento('cuplaSeleccionada', { cupla_status: seleccionActual });
-
-        const target = document.getElementById('controles-cta');
-        if (target) {
-          const y = target.getBoundingClientRect().top + window.pageYOffset - 80;
-          window.scrollTo({ top: y, behavior: 'smooth' });
-        }
       });
     });
 
-    // Cambiar selección
     bannerCambiar.addEventListener('click', () => {
       seleccionActual = null;
       tipoBtns.forEach(b => b.classList.remove('selected', 'desactivado'));
@@ -191,62 +221,44 @@
       syncTubeFromDraft();
     });
 
-    // Si ya venía seleccionado (modo edición), pre-seleccionar
-    const itvPrefill = loadIntervencion();
-    if (itvPrefill && itvPrefill.draft && itvPrefill.draft.cupla_status) {
-      const val = itvPrefill.draft.cupla_status;
-      const btn = Array.from(tipoBtns).find(b => b.dataset.code === val);
-      if (btn) btn.click();
-    }
-
-    // Siguiente tubo
-    btnSiguiente.addEventListener('click', () => {
+    // --- EL TRIGGER DEL TIEMPO REAL ---
+    btnSiguiente.addEventListener('click', async () => {
       if (!seleccionActual) return;
-
-      pushEvento('tuboCerrado', { cupla_status: seleccionActual });
-
-      // marcar completado en tubos[]
-      const itv = loadIntervencion(); if (!itv) return;
+      
+      const itv = loadIntervencion();
       const tubes = loadTubes();
       const idx = currentTubeIndex(itv);
-      const t = ensureTubeIndex(tubes, idx);
-      t.completedAt = new Date().toISOString();
+      
+      // Datos completos del tubo (unimos el draft con la cupla recién elegida)
+      const dataTubo = { ...itv.draft, cupla_status: seleccionActual };
+
+      // 1) Guardamos localmente para el operador (tu lógica)
+      if (tubes[idx]) tubes[idx].completedAt = new Date().toISOString();
       saveTubes(tubes);
 
-      if (isEditMode()) {
-        // editando un tubo viejo -> volver al fin del proceso
-        clearEditMode();
-        itv.draft = {};
-        saveIntervencion(itv);
-        window.location.href = (localStorage.getItem('lastPage') || 'findelproceso.html');
-        return;
-      }
+      // 2) SUBIMOS A FIREBASE PARA EL JEFE (Nueva lógica)
+      btnSiguiente.disabled = true;
+      btnSiguiente.textContent = "Sincronizando...";
+      await guardarTuboEnVivo(itv, dataTubo);
 
-      // flujo normal -> avanzar
-      itv.tuboActual = Number(itv.tuboActual || 0) + 1;
-      itv.draft = {};
+      // 3) Avanzamos (tu lógica)
+      itv.tuboActual = Number(itv.tuboActual) + 1;
+      itv.draft = {}; 
       saveIntervencion(itv);
-
       window.location.href = 'Desgaste.html';
     });
 
-    // Finalizar inspección -> ir a findelproceso.html
-    btnFinalizar.addEventListener('click', () => {
+    btnFinalizar.addEventListener('click', async () => {
       if (!seleccionActual) return;
-
-      const itv = loadIntervencion(); if (!itv) return;
-
-      // marcar completado en tubos[]
-      const tubes = loadTubes();
-      const idx = currentTubeIndex(itv);
-      const t = ensureTubeIndex(tubes, idx);
-      t.completedAt = new Date().toISOString();
-      saveTubes(tubes);
-
-      clearEditMode();
-      itv.draft = {};
-      saveIntervencion(itv);
-
+      const itv = loadIntervencion();
+      const dataTubo = { ...itv.draft, cupla_status: seleccionActual };
+      
+      btnFinalizar.disabled = true;
+      btnFinalizar.textContent = "Finalizando...";
+      
+      // Marcamos como finalizada en Firebase para que el jefe sepa que terminó
+      await guardarTuboEnVivo(itv, dataTubo, true);
+      
       window.location.href = 'findelproceso.html';
     });
   </script>

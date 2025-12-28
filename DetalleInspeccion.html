@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle de Inspección</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --blue-1: #0055AA;
+      --blue-2: #05145A;
+      --bg: #0A1C4D;
+      --white: #FFFFFF;
+      --text: #0F0F14;
+      --border: #E5E7EB;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: min(1000px, 100%);
+      background: var(--white);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+
+    /* Header */
+    .header-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 15px;
+    }
+
+    .btn-back {
+      text-decoration: none;
+      color: var(--blue-1);
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-back:hover { text-decoration: underline; }
+
+    h1 {
+      margin: 0;
+      font-family: "Kanit", sans-serif;
+      color: var(--blue-2);
+      font-size: 24px;
+    }
+
+    /* Resumen Grid */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+      background: #F3F4F6;
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    .summary-item label {
+      display: block;
+      font-size: 12px;
+      color: #6B7280;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .summary-item span {
+      font-size: 16px;
+      color: var(--blue-2);
+      font-weight: 500;
+    }
+
+    /* Tabla */
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead {
+      background: var(--blue-1);
+      color: white;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    th { font-family: "Kanit", sans-serif; font-weight: 500; }
+    
+    tr:nth-child(even) { background-color: #F9FAFB; }
+    tr:hover { background-color: #F0F9FF; }
+
+    /* Estado visual */
+    .badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .badge-gray { background: #E5E7EB; color: #374151; } /* Sin novedad */
+    .badge-red { background: #FEE2E2; color: #991B1B; }  /* Daño/Problema */
+    .badge-blue { background: #DBEAFE; color: #1E40AF; } /* Info */
+
+    #loading { text-align: center; font-size: 18px; color: #666; padding: 40px; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-nav">
+      <a href="UsuarioDashboard.html" class="btn-back">← Volver al Dashboard</a>
+      <img src="img/logoHorizontal.png" alt="Logo" style="height:30px;">
+    </div>
+
+    <div id="loading">Cargando detalles de la inspección...</div>
+
+    <div id="content" style="display: none;">
+      <h1 id="tituloPozo">Pozo: ...</h1>
+      <p style="margin-top:0; color:#666;" id="subtituloFecha">...</p>
+
+      <div class="summary-grid">
+        <div class="summary-item"><label>Cliente</label><span id="valCliente">-</span></div>
+        <div class="summary-item"><label>Área</label><span id="valArea">-</span></div>
+        <div class="summary-item"><label>OT</label><span id="valOT">-</span></div>
+        <div class="summary-item"><label>Solicitado por</label><span id="valSolicitado">-</span></div>
+        <div class="summary-item"><label>Operador</label><span id="valOperador">-</span></div>
+        <div class="summary-item"><label>Total Tubos</label><span id="valTotal">-</span></div>
+      </div>
+
+      <h3>Detalle Tubo a Tubo</h3>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Nro</th>
+              <th>Tipo</th>
+              <th>Desgaste</th>
+              <th>Corrosión</th>
+              <th>Cupla</th>
+              <th>Observaciones / Justif.</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCuerpo">
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    // 1. Configuración
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067",
+      measurementId: "G-8XY511E3JL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // 2. Obtener ID de la URL
+    const params = new URLSearchParams(window.location.search);
+    const docId = params.get('id');
+
+    if (!docId) {
+      alert("No se especificó una inspección.");
+      window.location.href = "UsuarioDashboard.html";
+    }
+
+    // 3. Verificar Sesión (Seguridad)
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "usuario.html"; 
+        return;
+      }
+      // Cargar datos
+      cargarDetalle(docId);
+    });
+
+    async function cargarDetalle(id) {
+      try {
+        const docRef = doc(db, "inspecciones", id);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          document.getElementById("loading").textContent = "El documento no existe o fue borrado.";
+          return;
+        }
+
+        const data = docSnap.data();
+        mostrarDatos(data);
+
+      } catch (e) {
+        console.error(e);
+        document.getElementById("loading").textContent = "Error al leer datos.";
+      }
+    }
+
+    function mostrarDatos(data) {
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("content").style.display = "block";
+
+      // Llenar Cabecera
+      document.getElementById("tituloPozo").textContent = `Pozo: ${data.pozo || "Sin Datos"}`;
+      
+      let fecha = "";
+      if (data.createdAt && data.createdAt.seconds) {
+        fecha = new Date(data.createdAt.seconds * 1000).toLocaleString();
+      }
+      document.getElementById("subtituloFecha").textContent = `Inspección realizada el: ${fecha}`;
+
+      document.getElementById("valCliente").textContent = data.cliente || "-";
+      document.getElementById("valArea").textContent = data.area || "-";
+      document.getElementById("valOT").textContent = data.ot || "-";
+      document.getElementById("valSolicitado").textContent = data.solicitado || "-";
+      document.getElementById("valOperador").textContent = data.operador || "-";
+      document.getElementById("valTotal").textContent = data.tubosCount || "0";
+
+      // Llenar Tabla
+      const tbody = document.getElementById("tablaCuerpo");
+      const tubos = data.tubos || [];
+
+      // Ordenar por número de tubo (opcional, pero recomendado)
+      tubos.sort((a, b) => Number(a.nro) - Number(b.nro));
+
+      tubos.forEach(t => {
+        // En findeproceso.html guardamos la data útil dentro de 'draft'
+        const d = t.draft || {}; 
+        
+        const tr = document.createElement("tr");
+
+        // Helpers para formatear si está vacío
+        const tipo = d.tipo || "-";
+        const desgaste = d.desgaste || "-";
+        const corrosion = d.corrosion || "-";
+        const cupla = d.cupla_status || d.cupla || "-"; // A veces se guarda como status
+        const justif = d.justificacion || "";
+
+        // Estilo simple: si hay justificación, ponerlo en negrita o color
+        const obsHtml = justif ? `<span class="badge badge-blue">${justif}</span>` : "-";
+
+        tr.innerHTML = `
+          <td><b>${t.nro}</b></td>
+          <td>${tipo}</td>
+          <td>${desgaste}</td>
+          <td>${corrosion}</td>
+          <td>${cupla}</td>
+          <td>${obsHtml}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>

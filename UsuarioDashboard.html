@@ -76,11 +76,14 @@
       gap: 10px;
       position: relative;
       overflow: hidden;
-      transition: transform 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer; /* Indica que es clicable */
     }
     
     .inspection-card:hover {
-      transform: translateY(-2px);
+      transform: translateY(-3px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+      border: 1px solid var(--blue-1);
     }
 
     .card-header {
@@ -123,11 +126,17 @@
       padding-top: 10px;
       border-top: 1px solid #eee;
       display: flex;
-      gap: 20px;
+      justify-content: space-between; /* Separar contenido */
+      align-items: center;
       font-size: 14px;
     }
 
-    .status-ok { color: #10B981; font-weight: bold; }
+    .link-detail { 
+        color: var(--blue-1); 
+        font-weight: bold; 
+        font-size: 13px;
+        text-decoration: none;
+    }
 
     #loading { color: white; text-align: center; margin-top: 40px; }
     #no-data { color: rgba(255,255,255,0.7); text-align: center; display: none; margin-top: 20px; }
@@ -155,7 +164,7 @@
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
     import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-    // 1. Configuración (LA MISMA que usaste antes)
+    // 1. Configuración
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
       authDomain: "sudbau-app.firebaseapp.com",
@@ -171,7 +180,6 @@
     const db = getFirestore(app);
 
     // 2. Mapeo: Email Usuario -> Nombre Cliente en Base de Datos
-    // IMPORTANTE: Asegurate de crear los usuarios en Firebase Auth con estos emails exactos
     const CLIENT_MAP = {
       "paesa@sudbauapp.com": "PAESA",
       "paesamendoza@sudbauapp.com": "PAESA MENDOZA",
@@ -195,14 +203,13 @@
     // 3. Verificar sesión
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        window.location.href = "usuario.html"; // Volver al login si no hay usuario
+        window.location.href = "usuario.html"; 
         return;
       }
 
       const email = user.email.toLowerCase();
       userEmailDisplay.textContent = email;
 
-      // Buscar el nombre real del cliente
       const clientName = CLIENT_MAP[email];
 
       if (!clientName) {
@@ -220,8 +227,7 @@
       try {
         const ref = collection(db, "inspecciones");
         
-        // QUERY: Traer donde cliente == clientName
-        // NOTA: Si falla el orderBy, quitalo temporalmente. Firestore pedirá crear un índice.
+        // Query con ordenamiento (requiere índice en Firebase)
         const q = query(
           ref, 
           where("cliente", "==", clientName),
@@ -239,22 +245,21 @@
 
         snapshot.forEach(doc => {
           const data = doc.data();
-          renderCard(data, doc.id);
+          renderCard(data, doc.id); // Pasamos el ID del documento
         });
 
       } catch (error) {
         console.error("Error al cargar:", error);
         loading.textContent = "Error al cargar datos. Verifique conexión.";
         
-        // Tip común: Firestore a veces requiere crear un índice para queries compuestas
         if(error.message.includes("index")) {
-            alert("Administrador: Se requiere crear un índice en Firebase Console para ordenar por fecha.");
+            alert("Administrador: Se requiere crear un índice en Firebase Console.");
             console.log("Enlace para crear índice:", error.message);
         }
       }
     }
 
-    // 5. Renderizar HTML
+    // 5. Renderizar Tarjeta (MODIFICADO para ser clicable)
     function renderCard(data, id) {
       // Formatear fecha
       let fechaStr = "Sin fecha";
@@ -266,6 +271,11 @@
       const card = document.createElement("div");
       card.className = "inspection-card";
       
+      // EVENTO CLICK: Redirigir al detalle pasando el ID
+      card.addEventListener("click", () => {
+          window.location.href = `DetalleInspeccion.html?id=${id}`;
+      });
+
       // Construimos el HTML interno
       card.innerHTML = `
         <div class="card-header">
@@ -282,7 +292,7 @@
 
         <div class="stat-row">
             <div>📦 <b>${data.tubosCount || 0}</b> Tubos</div>
-            <div class="status-ok">✔ Finalizado</div>
+            <div class="link-detail">Ver detalle →</div>
         </div>
       `;
 
@@ -292,7 +302,7 @@
     // 6. Cerrar Sesión
     document.getElementById("btnLogout").addEventListener("click", () => {
       signOut(auth).then(() => {
-        window.location.href = "index.html";
+        window.location.href = "index.html"; // O usuario.html
       });
     });
 

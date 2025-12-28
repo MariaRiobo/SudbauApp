@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingreso Operador</title>
+  
+  <style>
+    :root {
+      --blue: #0055AA;
+      --blue-dark: #05145A;
+      --card: #FFFFFF;
+      --border: #CDCDDC;
+      --muted: #6B7280;
+      --bg: #0A1C4D;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: "Noto Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px 14px;
+    }
+
+    .frame {
+      width: min(520px, 100%);
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 22px 50px rgba(0,0,0,.25);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .logo {
+      height: 44px;
+      object-fit: contain;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--blue-dark);
+      line-height: 1.15;
+    }
+
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--blue-dark);
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 12px;
+      border: 1px solid var(--blue);
+      border-radius: 12px;
+      box-sizing: border-box;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-width: 2px;
+      border-color: var(--blue-dark);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .btn {
+      flex: 1;
+      border: 1px solid var(--blue);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 10px 18px rgba(0,85,170,.25);
+      transition: transform .08s ease, box-shadow .12s ease, filter .12s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 7px 14px rgba(0,85,170,.2);
+    }
+
+    .btn:disabled {
+      background: var(--muted);
+      border-color: var(--muted);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn.secundario {
+      background: #fff;
+      color: var(--blue);
+    }
+
+    .error {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #EF4444;
+      color: #991B1B;
+      background: #FEF2F2;
+      font-size: 13px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="frame">
+      <div class="card">
+        <div class="top">
+          <img src="img/logoHorizontal.png" alt="Sudbau" class="logo" />
+          <div>
+            <h1 class="title">Acceso Operadores</h1>
+            <p class="sub">Ingresá con tus credenciales asignadas</p>
+          </div>
+        </div>
+
+        <form id="loginForm">
+            <label for="email">Usuario (Email)</label>
+            <input id="email" type="email" placeholder="nombre@sudbau.com" required />
+
+            <label for="clave">Contraseña</label>
+            <input id="clave" type="password" placeholder="••••••••" required />
+
+            <div class="error" id="errorBox"></div>
+
+            <div class="row">
+                <a class="btn secundario" href="index.html">Volver</a>
+                <button type="submit" class="btn" id="btnIngresar">Ingresar</button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // 1. Importar funciones necesarias de Firebase v9+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // 2. PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE (La obtienes en la consola)
+    // ------------------------------------------------------------------
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067",
+      measurementId: "G-8XY511E3JL"
+    };
+
+    // ------------------------------------------------------------------
+
+    // Inicializar Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Referencias DOM
+    const loginForm = document.getElementById("loginForm");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("clave");
+    const errorBox = document.getElementById("errorBox");
+    const btnIngresar = document.getElementById("btnIngresar");
+
+    // Lógica de Login
+    loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault(); // Evita recarga de página
+
+        const email = emailInput.value;
+        const password = passwordInput.value;
+
+        // Resetear UI
+        errorBox.style.display = "none";
+        btnIngresar.textContent = "Verificando...";
+        btnIngresar.disabled = true;
+
+        try {
+            // Intentar login con Firebase
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            console.log("Login exitoso:", user.email);
+
+            // Guardar datos básicos en localStorage (Opcional, útil para la siguiente página)
+            localStorage.setItem("userLoggedIn", "true");
+            localStorage.setItem("userEmail", user.email);
+            localStorage.setItem("userUid", user.uid); // ID único de Firebase
+
+            // Redirección
+            window.location.href = "InicioSesion.html";
+
+        } catch (error) {
+            console.error("Error code:", error.code);
+            console.error("Error msg:", error.message);
+            
+            // Manejo de errores amigables en español
+            let mensaje = "Ocurrió un error. Intenta nuevamente.";
+            
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                mensaje = "Usuario o contraseña incorrectos.";
+            } else if (error.code === 'auth/too-many-requests') {
+                mensaje = "Demasiados intentos fallidos. Espera unos minutos.";
+            }
+
+            errorBox.textContent = mensaje;
+            errorBox.style.display = "block";
+            
+            // Restaurar botón
+            btnIngresar.textContent = "Ingresar";
+            btnIngresar.disabled = false;
+        }
+    });
+  </script>
+</body>
+</html>

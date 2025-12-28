@@ -139,31 +139,12 @@
       <h2>Elegí cómo ingresar</h2>
 
       <div class="actions">
-        <a class="btn" href="InicioSesion.html">Operador</a>
-        <button class="btn" id="btnUsuario" type="button">Usuario</button>
+        <a class="btn" href="operador.html">Operador</a>
+        <a class="btn" href="usuario.html">Usuario</a>
       </div>
     </section>
 
     <div class="footer">SÜDBAU · Inspecciones</div>
   </main>
-
-  <script>
-    /**
-     * Lógica de navegación segura
-     */
-    document.getElementById("btnUsuario").addEventListener("click", function(e) {
-      e.preventDefault();
-      
-      // 1. Limpieza absoluta de cualquier rastro de sesión previa
-      localStorage.removeItem("usuarioView");
-      localStorage.removeItem("usuarioEmpresa");
-      
-      // 2. Pequeño delay técnico para asegurar que el navegador procesó la limpieza del storage
-      // y evitar trabas visuales en la transición
-      setTimeout(() => {
-        window.location.href = "usuario.html";
-      }, 50);
-    });
-  </script>
- </body>
- </html>
+</body>
+</html>

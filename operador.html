@@ -184,12 +184,11 @@
   </div>
 
   <script type="module">
-    // 1. Importar funciones necesarias de Firebase v9+
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    // 1. Importar funciones necesarias (incluyendo signOut)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-    // 2. PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE (La obtienes en la consola)
-    // ------------------------------------------------------------------
+    // 2. TU CONFIGURACIÓN DE FIREBASE
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
       authDomain: "sudbau-app.firebaseapp.com",
@@ -200,16 +199,12 @@
       measurementId: "G-8XY511E3JL"
     };
 
-    // ------------------------------------------------------------------
-
     // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
     // Referencias DOM
     const loginForm = document.getElementById("loginForm");
-    const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("clave");
     const errorBox = document.getElementById("errorBox");
     const btnIngresar = document.getElementById("btnIngresar");
 
@@ -217,8 +212,9 @@
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault(); // Evita recarga de página
 
-        const email = emailInput.value;
-        const password = passwordInput.value;
+        // Obtenemos valores y convertimos email a minúsculas y sin espacios
+        const email = document.getElementById("email").value.toLowerCase().trim();
+        const password = document.getElementById("clave").value;
 
         // Resetear UI
         errorBox.style.display = "none";
@@ -230,26 +226,41 @@
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            console.log("Login exitoso:", user.email);
+            // =========================================================
+            // 🛑 SEGURIDAD: LISTA BLANCA DE OPERADORES
+            // Solo dejamos pasar si el email es exactamente este:
+            // =========================================================
+            const OPERADORES_PERMITIDOS = ["operarios@sudbauapp.com"];
 
-            // Guardar datos básicos en localStorage (Opcional, útil para la siguiente página)
+            if (!OPERADORES_PERMITIDOS.includes(user.email)) {
+                // Si NO está en la lista (es un cliente o un intruso):
+                await signOut(auth); // Lo desconectamos de inmediato
+                throw new Error("WRONG_PORTAL"); // Lanzamos error personalizado
+            }
+
+            // Si pasa la validación:
+            console.log("Login exitoso y autorizado:", user.email);
+
             localStorage.setItem("userLoggedIn", "true");
             localStorage.setItem("userEmail", user.email);
-            localStorage.setItem("userUid", user.uid); // ID único de Firebase
+            localStorage.setItem("userUid", user.uid);
 
-            // Redirección
+            // Redirección al panel de carga de datos
             window.location.href = "InicioSesion.html";
 
         } catch (error) {
-            console.error("Error code:", error.code);
-            console.error("Error msg:", error.message);
+            console.error("Error:", error);
             
-            // Manejo de errores amigables en español
             let mensaje = "Ocurrió un error. Intenta nuevamente.";
             
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            // Mensaje específico si intentó entrar un cliente
+            if (error.message === "WRONG_PORTAL") {
+                mensaje = "⛔ Acceso denegado. Esta sección es exclusiva para Operadores.";
+            } 
+            else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                 mensaje = "Usuario o contraseña incorrectos.";
-            } else if (error.code === 'auth/too-many-requests') {
+            } 
+            else if (error.code === 'auth/too-many-requests') {
                 mensaje = "Demasiados intentos fallidos. Espera unos minutos.";
             }
 

@@ -2,263 +2,160 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel Usuario</title>
-  <link rel="stylesheet" href="css/app.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Cliente</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
-    :root{
-      --blue:#0055AA;
-      --blue-dark:#05145A;
-      --border:#CDCDDC;
-      --bg:#05145A;
-      --bg2:#0A1C4D;
-      --card:#fff;
-      --muted:#6b78a8;
+    :root {
+      --blue-1: #0055AA;
+      --blue-2: #05145A;
+      --bg: #0A1C4D;
+      --white: #FFFFFF;
+      --text: #0F0F14;
+      --gray: #CDCDDC;
     }
 
-    body{
-      margin:0;
-      font-family:"Noto Sans", sans-serif;
-      background: var(--bg);
-      color: var(--blue-dark);
+    body {
+      margin: 0;
+      font-family: "Noto Sans", sans-serif;
+      background: var(--bg); /* Fondo oscuro corporativo */
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
     }
 
-    .wrap{
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:18px;
-      box-sizing:border-box;
+    .header {
+      width: min(800px, 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      color: white;
     }
 
-    .panel{
-      width:min(1100px, 100%);
-      background:var(--card);
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow:0 12px 26px rgba(0,0,0,.18);
-      padding:16px;
-      box-sizing:border-box;
+    .header h1 {
+      font-family: "Kanit", sans-serif;
+      font-size: 24px;
+      margin: 0;
     }
 
-    .topbar{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:12px;
-      flex-wrap:wrap;
-      padding-bottom:12px;
-      border-bottom:1px solid var(--border);
-      margin-bottom:12px;
+    .logout-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.4);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: "Kanit", sans-serif;
+      transition: all 0.2s;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,0.1); }
+
+    .container {
+      width: min(800px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
+    /* Tarjeta de Inspección */
+    .inspection-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    
+    .inspection-card:hover {
+      transform: translateY(-2px);
     }
 
-    .brand img{
-      height:34px;
-      width:auto;
-      object-fit:contain;
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+      margin-bottom: 4px;
     }
 
-    .title{
-      font-family:"Kanit", sans-serif;
-      margin:0;
-      font-size:22px;
-      color:var(--blue-dark);
-      line-height:1.1;
+    .date-badge {
+      background: var(--blue-2);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
     }
 
-    .subtitle{
-      margin:4px 0 0;
-      color:var(--muted);
-      font-size:13px;
+    .pozo-title {
+      font-family: "Kanit", sans-serif;
+      font-size: 20px;
+      color: var(--blue-1);
+      margin: 0;
     }
 
-    .actions{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 14px;
+      color: #555;
     }
 
-    .btn{
-      background:var(--blue);
-      color:#fff;
-      border:none;
-      padding:10px 12px;
-      border-radius:12px;
-      cursor:pointer;
-      font-family:"Kanit", sans-serif;
-      font-size:14px;
-      box-shadow:0 10px 18px rgba(0,85,170,.18);
+    .info-item b { color: var(--blue-2); }
+
+    .stat-row {
+      margin-top: 8px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 20px;
+      font-size: 14px;
     }
 
-    .btn-secondary{
-      background:#E9F3FF;
-      color:var(--blue-dark);
-      border:1px solid rgba(0,85,170,.25);
-      box-shadow:none;
-    }
+    .status-ok { color: #10B981; font-weight: bold; }
 
-    .chips{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-      margin: 6px 0 10px;
-    }
-
-    .chip{
-      background:#E9F3FF;
-      border:1px solid rgba(0,85,170,.25);
-      color:var(--blue-dark);
-      border-radius:999px;
-      padding:6px 10px;
-      font-size:12px;
-      white-space:nowrap;
-    }
-    .chip strong{ font-family:"Kanit", sans-serif; font-weight:600; }
-
-    .status{
-      margin:12px 0;
-      padding:10px 12px;
-      background:#F6F8FF;
-      border:1px solid var(--border);
-      border-radius:12px;
-      color:var(--blue-dark);
-      font-size:13px;
-    }
-
-    /* ===== Tabla desktop ===== */
-    .table-wrap{
-      overflow:auto;
-      border:1px solid var(--border);
-      border-radius:12px;
-    }
-
-    table{
-      width:100%;
-      border-collapse:collapse;
-      min-width:900px;
-    }
-
-    thead th{
-      position:sticky;
-      top:0;
-      background:#E9F3FF;
-      color:var(--blue-dark);
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.03em;
-      border-bottom:1px solid var(--border);
-      padding:10px 10px;
-      text-align:left;
-      z-index:1;
-    }
-
-    tbody td{
-      border-top:1px solid #EFEFF4;
-      padding:10px 10px;
-      font-size:13px;
-      color:var(--blue-dark);
-      vertical-align:top;
-    }
-
-    tbody tr:hover td{ background:#FAFBFF; }
-
-    .muted{ color:var(--muted); }
-
-    .pill{
-      display:inline-block;
-      padding:4px 8px;
-      border-radius:999px;
-      font-size:12px;
-      border:1px solid var(--border);
-      background:#fff;
-      white-space:nowrap;
-    }
-    .pill-ok{ border-color: rgba(0,150,90,.35); background: rgba(0,150,90,.08); }
-    .pill-warn{ border-color: rgba(210,120,0,.35); background: rgba(210,120,0,.08); }
-
-    .empty{
-      padding:16px;
-      color:var(--muted);
-      font-size:13px;
-    }
-
-    /* ===== Responsive mobile: tabla -> cards ===== */
-    @media (max-width: 720px){
-      .wrap{ padding:12px; align-items:flex-start; }
-      .panel{ padding:14px; }
-
-      .brand img{ height:30px; }
-      .title{ font-size:20px; }
-      .subtitle{ font-size:12px; }
-
-      /* en mobile no necesitamos min-width gigante */
-      table{ min-width: 0; }
-
-      thead{ display:none; }
-      table, tbody, tr, td{ display:block; width:100%; }
-      .table-wrap{ border:none; overflow:visible; }
-
-      tbody tr{
-        margin: 12px 0;
-        border:1px solid var(--border);
-        border-radius:14px;
-        overflow:hidden;
-        box-shadow:0 10px 18px rgba(0,0,0,.06);
-      }
-
-      tbody td{
-        border-top:1px solid #EFEFF4;
-        padding:10px 12px;
-        display:flex;
-        gap:10px;
-        justify-content:space-between;
-        align-items:flex-start;
-      }
-
-      tbody td::before{
-        content: attr(data-label);
-        font-weight:700;
-        color:var(--blue-dark);
-        font-size:12px;
-        text-transform:uppercase;
-        letter-spacing:.02em;
-        flex: 0 0 42%;
-      }
-
-      tbody td > *{
-        flex: 1;
-        text-align:right;
-      }
-
-      /* primera fila (tubo) más “header” */
-      tbody td.tubo-cell{
-        background:#E9F3FF;
-        border-top:none;
-      }
-      tbody td.tubo-cell::before{ content:"TUBO"; }
-      tbody td.tubo-cell > *{ font-family:"Kanit", sans-serif; font-weight:600; }
-    }
+    #loading { color: white; text-align: center; margin-top: 40px; }
+    #no-data { color: rgba(255,255,255,0.7); text-align: center; display: none; margin-top: 20px; }
   </style>
+</head>
+
+<body>
+
+  <div class="header">
+    <div>
+      <h1>Mis Inspecciones</h1>
+      <small id="userEmailDisplay" style="opacity: 0.8; font-size: 12px;">Cargando...</small>
+    </div>
+    <button class="logout-btn" id="btnLogout">Cerrar Sesión</button>
+  </div>
+
+  <div id="loading">Buscando registros...</div>
+  <div id="no-data">No se encontraron inspecciones para este cliente.</div>
+
+  <div class="container" id="inspectionsContainer">
+    </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
+    // 1. Configuración (LA MISMA que usaste antes)
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
       authDomain: "sudbau-app.firebaseapp.com",
@@ -270,275 +167,135 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
-    window.SUDBAU_DB = db;
-  </script>
-</head>
 
-<body>
-  <div class="wrap">
-    <div class="panel">
-      <div class="topbar">
-        <div class="brand">
-          <img src="img/logoHorizontal.png" alt="Südbau" />
-          <div>
-            <h1 class="title">Panel Usuario</h1>
-            <p class="subtitle">Visualización en tiempo real de la inspección</p>
-          </div>
-        </div>
+    // 2. Mapeo: Email Usuario -> Nombre Cliente en Base de Datos
+    // IMPORTANTE: Asegurate de crear los usuarios en Firebase Auth con estos emails exactos
+    const CLIENT_MAP = {
+      "paesa@sudbauapp.com": "PAESA",
+      "paesamendoza@sudbauapp.com": "PAESA MENDOZA",
+      "pcr@sudbauapp.com": "PCR",
+      "oilstone@sudbauapp.com": "OILSTONE",
+      "shell@sudbauapp.com": "SHELL",
+      "president@sudbauapp.com": "PRESIDENT PETROLEUM",
+      "vista@sudbauapp.com": "VISTA&OIL",
+      "ypf@sudbauapp.com": "YPF",
+      "madalena@sudbauapp.com": "MADALENA ENERGY",
+      "pecom@sudbauapp.com": "PECOM",
+      "cgc@sudbauapp.com": "CGC",
+      "capsa@sudbauapp.com": "CAPSA"
+    };
 
-        <div class="actions">
-          <button class="btn btn-secondary" id="btnCambiarEmpresa" type="button">Cambiar empresa</button>
-          <button class="btn" id="btnRefrescar" type="button">Refrescar</button>
-        </div>
-      </div>
+    const container = document.getElementById("inspectionsContainer");
+    const loading = document.getElementById("loading");
+    const noData = document.getElementById("no-data");
+    const userEmailDisplay = document.getElementById("userEmailDisplay");
 
-      <div class="chips">
-        <div class="chip">Empresa: <strong id="chipEmpresa">—</strong></div>
-        <div class="chip">Estado: <strong id="chipEstado">—</strong></div>
-        <div class="chip">Tubo actual: <strong id="chipTuboActual">—</strong></div>
-        <div class="chip">Última actualización: <strong id="chipLastUpdate">—</strong></div>
-        <div class="chip muted">Live ID: <strong id="chipLiveId">—</strong></div>
-      </div>
-
-      <div class="status" id="statusBox">Conectando…</div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Tubo</th>
-              <th>Desgaste</th>
-              <th>Corrosión</th>
-              <th>Tipo</th>
-              <th>Cupla</th>
-              <th>Completado</th>
-            </tr>
-          </thead>
-          <tbody id="tbody">
-            <tr><td class="empty" colspan="6">Esperando datos…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    /* ==========================
-       ✅ Seguridad mínima: si no hay sesión, volver al login
-       ========================== */
-    const sesion = JSON.parse(localStorage.getItem("usuarioView") || "null");
-    if (!sesion || sesion.role !== "usuario" || !sesion.empresa) {
-      window.location.replace("usuario.html");
-    }
-
-    function normEmpresa(s){ return (s || "").toString().trim().toUpperCase(); }
-
-    function getEmpresa(){
-      // pri: sesión
-      const s = JSON.parse(localStorage.getItem("usuarioView") || "null");
-      if (s && s.empresa) return normEmpresa(s.empresa);
-
-      // fallback
-      const ls = localStorage.getItem("usuarioEmpresa");
-      if (ls) return normEmpresa(ls);
-
-      // fallback url
-      const u = new URL(window.location.href);
-      const e = u.searchParams.get("empresa");
-      return e ? normEmpresa(e) : "";
-    }
-
-    function formatDate(d){
-      if (!d) return "—";
-      try { return new Date(d).toLocaleString(); } catch { return "—"; }
-    }
-
-    const statusBox = document.getElementById("statusBox");
-    const chipEmpresa = document.getElementById("chipEmpresa");
-    const chipEstado = document.getElementById("chipEstado");
-    const chipTuboActual = document.getElementById("chipTuboActual");
-    const chipLastUpdate = document.getElementById("chipLastUpdate");
-    const chipLiveId = document.getElementById("chipLiveId");
-    const tbody = document.getElementById("tbody");
-
-    const btnCambiarEmpresa = document.getElementById("btnCambiarEmpresa");
-    const btnRefrescar = document.getElementById("btnRefrescar");
-
-    let unsubscribeHeader = null;
-    let unsubscribeTubes = null;
-
-    function clearUnsubs(){
-      if (typeof unsubscribeHeader === "function") unsubscribeHeader();
-      if (typeof unsubscribeTubes === "function") unsubscribeTubes();
-      unsubscribeHeader = null;
-      unsubscribeTubes = null;
-    }
-
-    function setStatus(msg){ statusBox.textContent = msg; }
-
-    function renderEmpty(msg){
-      tbody.innerHTML = `<tr><td class="empty" colspan="6">${msg}</td></tr>`;
-    }
-
-    function renderRows(rows){
-      tbody.innerHTML = "";
-      if (!rows.length) {
-        renderEmpty("Todavía no hay tubos subidos.");
+    // 3. Verificar sesión
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "usuario.html"; // Volver al login si no hay usuario
         return;
       }
 
-      for (const r of rows) {
-        const cuplaHumana =
-          r.cupla_status === "buena" ? "BUENA" :
-          r.cupla_status === "defectuosa" ? "DEFECTUOSA" :
-          (r.cupla_status || "");
+      const email = user.email.toLowerCase();
+      userEmailDisplay.textContent = email;
 
-        const pillCupla = cuplaHumana
-          ? `<span class="pill ${cuplaHumana === "BUENA" ? "pill-ok" : "pill-warn"}">${cuplaHumana}</span>`
-          : `<span class="muted">—</span>`;
+      // Buscar el nombre real del cliente
+      const clientName = CLIENT_MAP[email];
 
-        const completado = r.completedAt ? formatDate(r.completedAt) : "—";
-
-        const tr = document.createElement("tr");
-
-        const tdTubo = document.createElement("td");
-        tdTubo.className = "tubo-cell";
-        tdTubo.setAttribute("data-label", "Tubo");
-        tdTubo.innerHTML = `<strong>${r.tuboNro ?? "—"}</strong>`;
-
-        const tdDesg = document.createElement("td");
-        tdDesg.setAttribute("data-label", "Desgaste");
-        tdDesg.textContent = r.desgaste || "—";
-
-        const tdCorr = document.createElement("td");
-        tdCorr.setAttribute("data-label", "Corrosión");
-        tdCorr.textContent = r.corrosion || "—";
-
-        const tdTipo = document.createElement("td");
-        tdTipo.setAttribute("data-label", "Tipo");
-        tdTipo.textContent = r.tipo || "—";
-
-        const tdCupla = document.createElement("td");
-        tdCupla.setAttribute("data-label", "Cupla");
-        tdCupla.innerHTML = pillCupla;
-
-        const tdComp = document.createElement("td");
-        tdComp.setAttribute("data-label", "Completado");
-        tdComp.className = "muted";
-        tdComp.textContent = completado;
-
-        tr.appendChild(tdTubo);
-        tr.appendChild(tdDesg);
-        tr.appendChild(tdCorr);
-        tr.appendChild(tdTipo);
-        tr.appendChild(tdCupla);
-        tr.appendChild(tdComp);
-
-        tbody.appendChild(tr);
-      }
-    }
-
-    async function conectarDashboard(){
-      clearUnsubs();
-
-      const empresa = getEmpresa();
-      chipEmpresa.textContent = empresa || "—";
-      chipEstado.textContent = "—";
-      chipTuboActual.textContent = "—";
-      chipLastUpdate.textContent = "—";
-      chipLiveId.textContent = "—";
-
-      if (!empresa) {
-        setStatus("No hay empresa seleccionada. Volvé y elegí empresa.");
-        renderEmpty("Sin empresa.");
+      if (!clientName) {
+        loading.style.display = "none";
+        alert("Usuario no configurado en el sistema de clientes. Contacte a administración.");
         return;
       }
 
-      const db = window.SUDBAU_DB;
-      if (!db) {
-        setStatus("Firestore no inicializado.");
-        renderEmpty("Sin conexión a Firestore.");
-        return;
-      }
+      console.log(`Cargando datos para: ${clientName}`);
+      await cargarInspecciones(clientName);
+    });
 
-      setStatus("Conectando a la última inspección en vivo…");
+    // 4. Función para cargar datos de Firestore
+    async function cargarInspecciones(clientName) {
+      try {
+        const ref = collection(db, "inspecciones");
+        
+        // QUERY: Traer donde cliente == clientName
+        // NOTA: Si falla el orderBy, quitalo temporalmente. Firestore pedirá crear un índice.
+        const q = query(
+          ref, 
+          where("cliente", "==", clientName),
+          orderBy("createdAt", "desc") 
+        );
 
-      const { collection, query, where, orderBy, limit, onSnapshot } =
-        await import("https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js");
+        const snapshot = await getDocs(q);
+        
+        loading.style.display = "none";
 
-      const qHeader = query(
-        collection(db, "inspecciones_live"),
-        where("cliente", "==", empresa),
-        orderBy("lastUpdateAt", "desc"),
-        limit(1)
-      );
-
-      unsubscribeHeader = onSnapshot(qHeader, (snap) => {
-        if (snap.empty) {
-          chipEstado.textContent = "—";
-          chipTuboActual.textContent = "—";
-          chipLastUpdate.textContent = "—";
-          chipLiveId.textContent = "—";
-          setStatus("No hay inspecciones en vivo para esa empresa (todavía).");
-          renderEmpty("Todavía no hay inspecciones en vivo para esta empresa.");
-          if (typeof unsubscribeTubes === "function") { unsubscribeTubes(); unsubscribeTubes = null; }
+        if (snapshot.empty) {
+          noData.style.display = "block";
           return;
         }
 
-        const doc0 = snap.docs[0];
-        const header = doc0.data() || {};
-        const liveId = doc0.id;
-
-        chipLiveId.textContent = liveId;
-        chipEstado.textContent = header.estado || "EN_PROCESO";
-        chipTuboActual.textContent = (header.tuboActual ?? "—");
-        chipLastUpdate.textContent =
-          header.lastUpdateAt?.toDate ? header.lastUpdateAt.toDate().toLocaleString() : "—";
-
-        setStatus("Conectado. Escuchando tubos en tiempo real…");
-
-        const qTubes = query(
-          collection(db, "inspecciones_live", liveId, "tubos"),
-          orderBy("tuboNro", "asc")
-        );
-
-        if (typeof unsubscribeTubes === "function") unsubscribeTubes();
-
-        unsubscribeTubes = onSnapshot(qTubes, (tSnap) => {
-          const rows = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          renderRows(rows);
-        }, (err) => {
-          console.error(err);
-          setStatus("Error escuchando tubos (mirá consola).");
-          renderEmpty("Error de conexión con tubos.");
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          renderCard(data, doc.id);
         });
 
-      }, (err) => {
-        console.error(err);
-        setStatus("Error buscando inspección en vivo (mirá consola).");
-        renderEmpty("Error de conexión con inspección.");
-      });
+      } catch (error) {
+        console.error("Error al cargar:", error);
+        loading.textContent = "Error al cargar datos. Verifique conexión.";
+        
+        // Tip común: Firestore a veces requiere crear un índice para queries compuestas
+        if(error.message.includes("index")) {
+            alert("Administrador: Se requiere crear un índice en Firebase Console para ordenar por fecha.");
+            console.log("Enlace para crear índice:", error.message);
+        }
+      }
     }
 
-    /* ✅ Cambiar empresa: Corregido el retraso para evitar que se trabe */
-    btnCambiarEmpresa.addEventListener("click", (e) => {
-        e.preventDefault();
-        clearUnsubs();
-        localStorage.removeItem("usuarioView");
-        localStorage.removeItem("usuarioEmpresa");
+    // 5. Renderizar HTML
+    function renderCard(data, id) {
+      // Formatear fecha
+      let fechaStr = "Sin fecha";
+      if (data.createdAt && data.createdAt.seconds) {
+        const d = new Date(data.createdAt.seconds * 1000);
+        fechaStr = d.toLocaleDateString("es-AR", { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+
+      const card = document.createElement("div");
+      card.className = "inspection-card";
+      
+      // Construimos el HTML interno
+      card.innerHTML = `
+        <div class="card-header">
+            <h2 class="pozo-title">Pozo: ${data.pozo || "S/D"}</h2>
+            <span class="date-badge">${fechaStr}</span>
+        </div>
         
-        // Pequeño delay de 100ms para asegurar limpieza de memoria
-        setTimeout(() => {
-            window.location.href = "usuario.html";
-        }, 100);
+        <div class="info-grid">
+            <div class="info-item"><b>OT:</b> ${data.ot || "-"}</div>
+            <div class="info-item"><b>Área:</b> ${data.area || "-"}</div>
+            <div class="info-item"><b>Solicitado por:</b> ${data.solicitado || "-"}</div>
+            <div class="info-item"><b>Operador:</b> ${data.operador || "-"}</div>
+        </div>
+
+        <div class="stat-row">
+            <div>📦 <b>${data.tubosCount || 0}</b> Tubos</div>
+            <div class="status-ok">✔ Finalizado</div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    }
+
+    // 6. Cerrar Sesión
+    document.getElementById("btnLogout").addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
     });
 
-    btnRefrescar.addEventListener("click", () => {
-      conectarDashboard();
-    });
-
-    conectarDashboard();
   </script>
 </body>
 </html>

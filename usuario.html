@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/app.css" />
 
   <style>
+    /* ... (Mismo CSS que me pasaste) ... */
     :root {
       --blue: #0055AA;
       --blue-dark: #05145A;
@@ -82,7 +83,8 @@
       font-weight: 700;
     }
 
-    select, input {
+    /* He unificado el estilo para inputs */
+    input {
       width: 100%;
       padding: 12px 12px;
       border: 1px solid var(--blue);
@@ -90,6 +92,12 @@
       box-sizing: border-box;
       font-size: 14px;
       outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-width: 2px;
+      border-color: var(--blue-dark);
     }
 
     .row {
@@ -112,11 +120,21 @@
       color: #fff;
       box-shadow: 0 10px 18px rgba(0,85,170,.25);
       transition: transform .08s ease, box-shadow .12s ease, filter .12s ease;
+      display: flex;       /* Centrar texto si es botón */
+      justify-content: center;
+      align-items: center;
     }
 
     .btn:active {
       transform: translateY(1px);
       box-shadow: 0 7px 14px rgba(0,85,170,.2);
+    }
+    
+    .btn:disabled {
+      background: var(--muted);
+      border-color: var(--muted);
+      cursor: not-allowed;
+      box-shadow: none;
     }
 
     .btn.secundario {
@@ -150,73 +168,98 @@
           </div>
         </div>
 
-        <label for="empresa">Empresa</label>
-        <select id="empresa">
-          <option value="">— Seleccionar —</option>
-          <option value="PAESA">PAESA</option>
-        </select>
+        <form id="loginForm">
+            <label for="email">Usuario asignado</label>
+            <input id="email" type="email" placeholder="ej: cliente@sudbau.com" required />
 
-        <label for="clave">Clave</label>
-        <input id="clave" type="password" placeholder="Ingresar clave" />
+            <label for="clave">Clave</label>
+            <input id="clave" type="password" placeholder="Ingresar clave" required />
 
-        <div class="error" id="errorBox">Error</div>
+            <div class="error" id="errorBox">Error</div>
 
-        <div class="row">
-          <a class="btn secundario" href="index.html">Volver</a>
-          <button class="btn" id="btnIngresar">Ingresar</button>
-        </div>
+            <div class="row">
+            <a class="btn secundario" href="index.html">Volver</a>
+            <button type="submit" class="btn" id="btnIngresar">Ingresar</button>
+            </div>
+        </form>
       </div>
     </div>
   </div>
 
-  <script>
-    const EMPRESAS = {
-      "PAESA": "PAESA2025"
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+
+    // TU CONFIGURACIÓN
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067",
+      measurementId: "G-8XY511E3JL"
     };
 
-    const btnIngresar = document.getElementById("btnIngresar");
-    const empresaEl = document.getElementById("empresa");
-    const claveEl = document.getElementById("clave");
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const loginForm = document.getElementById("loginForm");
     const errorBox = document.getElementById("errorBox");
+    const btnIngresar = document.getElementById("btnIngresar");
 
-    btnIngresar.addEventListener("click", function() {
-      const empresa = (empresaEl.value || "").trim();
-      const clave = (claveEl.value || "").trim();
+    loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-      errorBox.style.display = "none";
+        const email = document.getElementById("email").value.toLowerCase().trim(); // Convertimos a minusculas
+        const password = document.getElementById("clave").value;
 
-      if (!empresa || !clave) {
-        errorBox.textContent = "Seleccioná una empresa e ingresá la clave.";
-        errorBox.style.display = "block";
-        return;
-      }
+        errorBox.style.display = "none";
+        btnIngresar.textContent = "Verificando...";
+        btnIngresar.disabled = true;
 
-      const claveCorrecta = EMPRESAS[empresa];
-      if (!claveCorrecta || clave !== claveCorrecta) {
-        errorBox.textContent = "Clave incorrecta.";
-        errorBox.style.display = "block";
-        return;
-      }
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-      // Deshabilitamos el botón para evitar clics múltiples durante la redirección
-      btnIngresar.disabled = true;
-      btnIngresar.textContent = "Ingresando...";
+            // --- 🛑 VALIDACIÓN DE ROL (SEGURIDAD) ---
+            // Si intenta entrar el operario por aquí, lo bloqueamos.
+            if (user.email === "operarios@sudbauapp.com") {
+                await signOut(auth); // Lo expulsamos
+                throw new Error("WRONG_PORTAL");
+            }
+            // ----------------------------------------
 
-      // GUARDADO ÚNICO Y SEGURO
-      const sessionData = {
-        role: "usuario",
-        empresa: empresa,
-        loggedAt: new Date().toISOString()
-      };
+            // Si pasa la validación, guardamos datos y redirigimos
+            const sessionData = {
+                role: "usuario",
+                email: user.email,
+                loggedAt: new Date().toISOString()
+            };
+            localStorage.setItem("usuarioView", JSON.stringify(sessionData));
+            
+            setTimeout(() => {
+                window.location.href = "UsuarioDashboard.html";
+            }, 100);
 
-      localStorage.setItem("usuarioView", JSON.stringify(sessionData));
-      localStorage.setItem("usuarioEmpresa", empresa);
+        } catch (error) {
+            console.error(error);
+            let mensaje = "Error al ingresar.";
 
-      // REDIRECCIÓN CONTROLADA
-      // Usamos un pequeño delay para que el localStorage se asiente antes de saltar
-      setTimeout(() => {
-        window.location.href = "UsuarioDashboard.html";
-      }, 150);
+            if (error.message === "WRONG_PORTAL") {
+                mensaje = "Error: Sos operador. Ingresá por la sección de Operador.";
+            } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                mensaje = "Usuario o contraseña incorrectos.";
+            } else if (error.code === 'auth/too-many-requests') {
+                mensaje = "Demasiados intentos. Esperá unos minutos.";
+            }
+
+            errorBox.textContent = mensaje;
+            errorBox.style.display = "block";
+            
+            btnIngresar.textContent = "Ingresar";
+            btnIngresar.disabled = false;
+        }
     });
   </script>
 </body>

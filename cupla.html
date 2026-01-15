@@ -11,7 +11,8 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        // CORREGIDO: Sin ./ para compatibilidad iOS
+        navigator.serviceWorker.register('sw.js')
           .then(reg => console.log('Sudbaü App: Modo Operador Activo'))
           .catch(err => console.log('Error al registrar Service Worker', err));
       });
@@ -47,9 +48,7 @@
       box-shadow: none;
       transform: none;
     }
-    .btn:disabled:hover,
-    .btn:disabled:focus { box-shadow: none; outline: none; }
-  </style>
+   </style>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
@@ -68,8 +67,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Exponemos las funciones necesarias para el script de abajo
-    window.SUDBAU_DB = db;
+     window.SUDBAU_DB = db;
     window.FB_DOC = doc;
     window.FB_SET = setDoc;
     window.FB_TS = serverTimestamp;
@@ -105,7 +103,7 @@
     </div>
 
     <div class="controles" id="controles-cta">
-      <a href="./tipo.html" class="btn-volver">Atrás</a>
+      <a href="tipo.html" class="btn-volver">Atrás</a>
       <button id="btn-siguiente-tubo" class="btn" disabled>Siguiente tubo</button>
     </div>
     <div class="controles">
@@ -114,8 +112,7 @@
   </div>
 
   <script>
-    /* ===== Helpers de estado (Tu lógica original) ===== */
-    function loadIntervencion() {
+     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
       if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
       const itv = JSON.parse(raw);
@@ -143,27 +140,21 @@
       tubes[idx].draft = { ...(tubes[idx].draft||{}), ...(itv.draft||{}) };
       saveTubes(tubes);
     }
-
-    /* =========================================================
-      ✅ LÓGICA DE SUBIDA EN TIEMPO REAL (Para el Jefe)
-    ========================================================= */
+ 
     async function guardarTuboEnVivo(itv, dataTubo, esFinal = false) {
       try {
         const db = window.SUDBAU_DB;
         const docFn = window.FB_DOC;
         const setFn = window.FB_SET;
-        const tsFn = window.FB_TS;
-
+         const tsFn = window.FB_TS;
         if (!db || !docFn) return;
-
-        // Aseguramos que la intervención tenga un ID único para Firebase
+ 
         if (!itv.liveId) {
           const d = new Date();
           itv.liveId = `LIVE-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
           saveIntervencion(itv);
         }
-
-        // 1) Cabecera: Para que el dashboard sepa qué está pasando
+ 
         const headerRef = docFn(db, "inspecciones_live", itv.liveId);
         await setFn(headerRef, {
           cliente: (itv.cliente || "").toString().toUpperCase().trim(),
@@ -175,8 +166,7 @@
           lastUpdateAt: tsFn(),
           estado: esFinal ? "FINALIZADA" : "EN_PROCESO"
         }, { merge: true });
-
-        // 2) Detalle del Tubo: Lo que se muestra en la tabla del cliente
+ 
         const tuboRef = docFn(db, "inspecciones_live", itv.liveId, "tubos", String(itv.tuboActual));
         await setFn(tuboRef, {
           tuboNro: Number(itv.tuboActual),
@@ -188,13 +178,12 @@
           updatedAt: tsFn()
         }, { merge: true });
 
-        console.log("✅ Sincronizado con Dashboard del Jefe");
+        console.log("✅ Sincronizado con Dashboard");
       } catch (err) {
         console.error("❌ Error subiendo a Firebase:", err);
       }
     }
-
-    /* ===== UI Init y Eventos (Tu lógica original intacta) ===== */
+ 
     const itvInit = loadIntervencion();
     const tuboSpan = document.getElementById('numero-tubo');
     if (itvInit && tuboSpan) tuboSpan.textContent = itvInit.tuboActual;
@@ -212,14 +201,12 @@
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         seleccionActual = btn.dataset.code;
-        tipoBtns.forEach(b => (b === btn) ? b.classList.add('selected') : b.classList.add('desactivado'));
-
+         tipoBtns.forEach(b => (b === btn) ? b.classList.add('selected') : b.classList.add('desactivado'));
         btnSiguiente.disabled = false;
         btnFinalizar.disabled = false;
         bannerTexto.textContent = `Seleccionaste: ${seleccionActual.toUpperCase()}`;
         banner.hidden = false;
-
-        setDraft('cupla_status', seleccionActual);
+         setDraft('cupla_status', seleccionActual);
         syncTubeFromDraft();
       });
     });
@@ -233,45 +220,38 @@
       setDraft('cupla_status', undefined);
       syncTubeFromDraft();
     });
-
-    // --- EL TRIGGER DEL TIEMPO REAL ---
+ 
     btnSiguiente.addEventListener('click', async () => {
       if (!seleccionActual) return;
-      
-      const itv = loadIntervencion();
+       const itv = loadIntervencion();
       const tubes = loadTubes();
-      const idx = currentTubeIndex(itv);
-      
-      // Datos completos del tubo (unimos el draft con la cupla recién elegida)
+       const idx = currentTubeIndex(itv);
       const dataTubo = { ...itv.draft, cupla_status: seleccionActual };
-
-      // 1) Guardamos localmente para el operador (tu lógica)
-      if (tubes[idx]) tubes[idx].completedAt = new Date().toISOString();
-      saveTubes(tubes);
-
-      // 2) SUBIMOS A FIREBASE PARA EL JEFE (Nueva lógica)
+ 
       btnSiguiente.disabled = true;
       btnSiguiente.textContent = "Sincronizando...";
       await guardarTuboEnVivo(itv, dataTubo);
 
-      // 3) Avanzamos (tu lógica)
+      if (tubes[idx]) tubes[idx].completedAt = new Date().toISOString();
+      saveTubes(tubes);
+
       itv.tuboActual = Number(itv.tuboActual) + 1;
       itv.draft = {}; 
       saveIntervencion(itv);
-      window.location.href = 'Desgaste.html';
+      
+      // CORREGIDO: Ruta en minúsculas para iPhone
+      window.location.href = 'desgaste.html';
     });
 
     btnFinalizar.addEventListener('click', async () => {
       if (!seleccionActual) return;
       const itv = loadIntervencion();
       const dataTubo = { ...itv.draft, cupla_status: seleccionActual };
-      
-      btnFinalizar.disabled = true;
+       btnFinalizar.disabled = true;
       btnFinalizar.textContent = "Finalizando...";
+       await guardarTuboEnVivo(itv, dataTubo, true);
       
-      // Marcamos como finalizada en Firebase para que el jefe sepa que terminó
-      await guardarTuboEnVivo(itv, dataTubo, true);
-      
+      // CORREGIDO: Ruta en minúsculas para iPhone
       window.location.href = 'findelproceso.html';
     });
   </script>

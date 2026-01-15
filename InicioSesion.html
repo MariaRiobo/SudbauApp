@@ -10,8 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        // CORREGIDO: Se quitó el ./ para mejor compatibilidad
+       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
           .then(reg => console.log('Sudbaü App: Modo Operador Activo'))
           .catch(err => console.log('Error al registrar Service Worker', err));
@@ -35,13 +34,13 @@
       padding-right: 30px !important; /* Espacio para la flecha */
     }
 
-    /* NUEVO: Contenedor para la flechita en iPhone */
+    /* Contenedor para la flechita en iPhone */
     .input-list-wrapper {
       position: relative;
       width: 100%;
     }
 
-    /* NUEVO: Icono de flecha (triangulito azul) */
+    /* Icono de flecha (triangulito azul) */
     .input-list-wrapper::after {
       content: '\25BC'; 
       position: absolute;
@@ -52,6 +51,12 @@
       color: #0055AA;
       pointer-events: none; 
       opacity: 0.6;
+    }
+
+    /* NUEVO: Estilo para resaltar error sin borrar datos */
+    .form-group.field-error input {
+      border: 2px solid #ef4444 !important;
+      background-color: #fef2f2 !important;
     }
 
     .botones-wrap {
@@ -252,33 +257,58 @@
       });
     });
 
-    document.getElementById('inicioForm').addEventListener('submit', (e) => {
-      if (!e.target.checkValidity()){
-        return;
-      }
+    document.getElementById('inicioForm').addEventListener('submit', function(e) {
+      // 1. Siempre detenemos el envío automático para que no se borre nada
       e.preventDefault();
 
+      // 2. Quitamos marcas de error previas
+      const allGroups = this.querySelectorAll('.form-group');
+      allGroups.forEach(g => g.classList.remove('field-error'));
+
+      // 3. Validamos si el formulario está completo
+      if (!this.checkValidity()){
+        alert("⚠️ Por favor, complete todos los campos obligatorios antes de continuar.");
+        
+        // Marcamos los campos vacíos en rojo sin resetear el formulario
+        const inputs = this.querySelectorAll('input[required]');
+        inputs.forEach(input => {
+          if(!input.checkValidity()){
+            input.closest('.form-group').classList.add('field-error');
+          }
+        });
+        return;
+      }
+ 
+      // 4. Capturamos los datos
       const letras = (document.getElementById('pozo_letras').value || '').toUpperCase();
       const nums   = (document.getElementById('pozo_num').value || '');
       const pozoValue = `${letras}-${nums}`;
 
       const intervencion = {
-        fecha: e.target.fecha.value,
-        cliente: e.target.cliente.value,
-        area: e.target.area.value,
+        fecha: this.fecha.value,
+        cliente: this.cliente.value,
+        area: this.area.value,
         pozo: pozoValue,
-        ot: e.target.ot.value,
-        operador: e.target.operador.value,
-        ayudante: e.target.ayudante.value,
-        solicitado: e.target.solicitado.value,
+        ot: this.ot.value,
+        operador: this.operador.value,
+        ayudante: this.ayudante.value,
+        solicitado: this.solicitado.value,
         tuboActual: 1
       };
 
-      if (confirm("¿Confirmar datos de inicio?")) {
+      // 5. RESUMEN DE CONFIRMACIÓN (Vuelve a estar activo)
+      const resumen = `📋 REVISIÓN DE DATOS:\n\n` +
+                      `• Cliente: ${intervencion.cliente}\n` +
+                      `• Pozo: ${intervencion.pozo}\n` +
+                      `• OT: ${intervencion.ot}\n` +
+                      `• Operador: ${intervencion.operador}\n` +
+                      `• Ayudante: ${intervencion.ayudante}\n\n` +
+                      `¿Confirmar inicio de inspección? Los datos no se podrán cambiar.`;
+
+      if (confirm(resumen)) {
         localStorage.setItem('intervencionActual', JSON.stringify(intervencion)); 
         localStorage.setItem('tubos', JSON.stringify([]));
-        // Asegurate que desgaste.html exista en minúsculas
-        window.location.href = 'desgaste.html';
+         window.location.href = 'desgaste.html';
       } 
     });
   </script>

@@ -11,8 +11,9 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Sudbaü App: Modo Operador Activo'))
+        // CORREGIDO: Se quitó el ./ para asegurar carga
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Sudbaü App: Modo Usuario Activo'))
           .catch(err => console.log('Error al registrar Service Worker', err));
       });
     }
@@ -21,7 +22,6 @@
   <link rel="stylesheet" href="css/app.css" />
 
   <style>
-    /* ... (Mismo CSS que me pasaste) ... */
     :root {
       --blue: #0055AA;
       --blue-dark: #05145A;
@@ -96,7 +96,13 @@
       font-weight: 700;
     }
 
-    /* He unificado el estilo para inputs */
+    /* CONTENEDOR PARA EL INPUT + OJO */
+    .password-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
     input {
       width: 100%;
       padding: 12px 12px;
@@ -108,9 +114,31 @@
       transition: border-color 0.2s;
     }
 
+    #clave {
+      padding-right: 45px; /* Espacio para el icono */
+    }
+
     input:focus {
       border-width: 2px;
       border-color: var(--blue-dark);
+    }
+
+    /* ESTILO DEL ICONO */
+    .toggle-password {
+      position: absolute;
+      right: 15px;
+      cursor: pointer;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    .toggle-password svg {
+      width: 20px;
+      height: 20px;
+      opacity: 0.7;
     }
 
     .row {
@@ -132,15 +160,14 @@
       background: var(--blue);
       color: #fff;
       box-shadow: 0 10px 18px rgba(0,85,170,.25);
-      transition: transform .08s ease, box-shadow .12s ease, filter .12s ease;
-      display: flex;       /* Centrar texto si es botón */
+      transition: transform .08s ease;
+      display: flex;
       justify-content: center;
       align-items: center;
     }
 
     .btn:active {
       transform: translateY(1px);
-      box-shadow: 0 7px 14px rgba(0,85,170,.2);
     }
     
     .btn:disabled {
@@ -186,13 +213,20 @@
             <input id="email" type="email" placeholder="ej: cliente@sudbau.com" required />
 
             <label for="clave">Clave</label>
-            <input id="clave" type="password" placeholder="Ingresar clave" required />
+            <div class="password-container">
+                <input id="clave" type="password" placeholder="Ingresar clave" required />
+                <div class="toggle-password" id="togglePassword">
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                </div>
+            </div>
 
             <div class="error" id="errorBox">Error</div>
 
             <div class="row">
-            <a class="btn secundario" href="index.html">Volver</a>
-            <button type="submit" class="btn" id="btnIngresar">Ingresar</button>
+              <a class="btn secundario" href="index.html">Volver</a>
+              <button type="submit" class="btn" id="btnIngresar">Ingresar</button>
             </div>
         </form>
       </div>
@@ -203,7 +237,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-    // TU CONFIGURACIÓN
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
       authDomain: "sudbau-app.firebaseapp.com",
@@ -220,12 +253,34 @@
     const loginForm = document.getElementById("loginForm");
     const errorBox = document.getElementById("errorBox");
     const btnIngresar = document.getElementById("btnIngresar");
+    const togglePassword = document.getElementById("togglePassword");
+    const passwordInput = document.getElementById("clave");
+    const eyeIcon = document.getElementById("eyeIcon");
+
+    // LÓGICA DE VISIBILIDAD (Corregida: Ojo abierto para ver, Tachado para ocultar)
+    togglePassword.addEventListener("click", () => {
+        const isPassword = passwordInput.type === "password";
+        passwordInput.type = isPassword ? "text" : "password";
+        
+        if (passwordInput.type === "text") {
+            // MOSTRAR: Ponemos el ojo abierto
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            `;
+        } else {
+            // OCULTAR: Ponemos el ojo tachado
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+            `;
+        }
+    });
 
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const email = document.getElementById("email").value.toLowerCase().trim(); // Convertimos a minusculas
-        const password = document.getElementById("clave").value;
+        const email = document.getElementById("email").value.toLowerCase().trim();
+        const password = passwordInput.value;
 
         errorBox.style.display = "none";
         btnIngresar.textContent = "Verificando...";
@@ -235,15 +290,11 @@
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // --- 🛑 VALIDACIÓN DE ROL (SEGURIDAD) ---
-            // Si intenta entrar el operario por aquí, lo bloqueamos.
             if (user.email === "operarios@sudbauapp.com") {
-                await signOut(auth); // Lo expulsamos
+                await signOut(auth);
                 throw new Error("WRONG_PORTAL");
             }
-            // ----------------------------------------
 
-            // Si pasa la validación, guardamos datos y redirigimos
             const sessionData = {
                 role: "usuario",
                 email: user.email,
@@ -256,20 +307,15 @@
             }, 100);
 
         } catch (error) {
-            console.error(error);
             let mensaje = "Error al ingresar.";
-
             if (error.message === "WRONG_PORTAL") {
                 mensaje = "Error: Sos operador. Ingresá por la sección de Operador.";
-            } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            } else if (error.code?.includes('auth/')) {
                 mensaje = "Usuario o contraseña incorrectos.";
-            } else if (error.code === 'auth/too-many-requests') {
-                mensaje = "Demasiados intentos. Esperá unos minutos.";
             }
 
             errorBox.textContent = mensaje;
             errorBox.style.display = "block";
-            
             btnIngresar.textContent = "Ingresar";
             btnIngresar.disabled = false;
         }

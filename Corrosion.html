@@ -11,7 +11,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('sw.js')
           .then(reg => console.log('Sudbaü App: Modo Operador Activo'))
           .catch(err => console.log('Error al registrar Service Worker', err));
       });
@@ -36,11 +36,11 @@
     </div>
 
     <div class="botones-container">
-      <a href="Tipo.html" class="btn-color amarillo">G2</a>
-      <a href="Tipo.html" class="btn-color azul">G3</a>
-      <a href="Tipo.html" class="btn-color verde">G4</a>
-      <a href="Tipo.html" class="btn-color rojo">G5</a>
-      <a href="Tipo.html" class="btn-color blanco">UNGRADE</a>
+      <a href="tipo.html" class="btn-color amarillo">G2</a>
+      <a href="tipo.html" class="btn-color azul">G3</a>
+      <a href="tipo.html" class="btn-color verde">G4</a>
+      <a href="tipo.html" class="btn-color rojo">G5</a>
+      <a href="tipo.html" class="btn-color blanco">UNGRADE</a>
     </div>
 
     <div class="controles">
@@ -159,7 +159,7 @@
           pushEvento('tipoAutoSeleccionado', { tipo: 'CO', motivo: 'G2+G2' });
 
           // C) Saltamos directo a Cupla.html
-          window.location.href = 'Cupla.html';
+          window.location.href = 'cupla.html';
 
         } else {
 
@@ -167,7 +167,7 @@
           syncTubeFromDraft();
 
           pushEvento('corrosionSeleccionada', { corrosion });
-          window.location.href = 'Tipo.html';
+          window.location.href = 'tipo.html';
         }
       });
     });

@@ -11,7 +11,8 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        // CORREGIDO: Se quitó el ./ para mejor compatibilidad
+        navigator.serviceWorker.register('sw.js')
           .then(reg => console.log('Sudbaü App: Modo Operador Activo'))
           .catch(err => console.log('Error al registrar Service Worker', err));
       });
@@ -31,9 +32,28 @@
     .form-group input[list] {
       width: 100%;
       box-sizing: border-box;
+      padding-right: 30px !important; /* Espacio para la flecha */
     }
 
-    /* --- CORRECCIÓN DE CSS PARA BOTONES SIMÉTRICOS --- */
+    /* NUEVO: Contenedor para la flechita en iPhone */
+    .input-list-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    /* NUEVO: Icono de flecha (triangulito azul) */
+    .input-list-wrapper::after {
+      content: '\25BC'; 
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: #0055AA;
+      pointer-events: none; 
+      opacity: 0.6;
+    }
+
     .botones-wrap {
       display: flex;
       gap: 12px;
@@ -41,7 +61,6 @@
       width: 100%;
     }
 
-    /* Estilo base para ambos botones */
     .btn-nav {
       flex: 1;
       height: 50px;
@@ -58,9 +77,8 @@
       transition: all 0.2s ease;
     }
 
-    /* Botón Empezar (Azul) */
     .btn-empezar {
-      background-color: #3b82f6; /* El azul de tu captura */
+      background-color: #3b82f6; 
       color: white;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
@@ -70,7 +88,6 @@
       transform: translateY(-1px);
     }
 
-    /* Botón Atrás (Gris/Blanco) */
     .btn-atras {
       background-color: #ffffff;
       color: #374151;
@@ -98,10 +115,12 @@
 
       <div class="form-group">
         <label for="cliente">Cliente</label>
-        <input type="text" id="cliente" name="cliente"
-               list="cliente-list"
-               placeholder="Seleccionar o escribir cliente..."
-               required autocomplete="off" />
+        <div class="input-list-wrapper">
+          <input type="text" id="cliente" name="cliente"
+                 list="cliente-list"
+                 placeholder="Seleccionar o escribir cliente..."
+                 required autocomplete="off" />
+        </div>
         <datalist id="cliente-list">
           <option value="PAESA">
           <option value="PAESA MENDOZA">
@@ -141,10 +160,12 @@
 
       <div class="form-group">
         <label for="operador">Operador</label>
-        <input type="text" id="operador" name="operador"
-               list="operador-list"
-               placeholder="Seleccionar o escribir operador..."
-               required autocomplete="off" />
+        <div class="input-list-wrapper">
+          <input type="text" id="operador" name="operador"
+                 list="operador-list"
+                 placeholder="Seleccionar o escribir operador..."
+                 required autocomplete="off" />
+        </div>
         <datalist id="operador-list">
           <option value="SAPURI CRISTIAN">
           <option value="MARINO LEANDRO">
@@ -157,10 +178,12 @@
 
       <div class="form-group">
         <label for="ayudante">Ayudante</label>
-        <input type="text" id="ayudante" name="ayudante"
-               list="ayudante-list"
-               placeholder="Seleccionar o escribir ayudante..."
-               required autocomplete="off" />
+        <div class="input-list-wrapper">
+          <input type="text" id="ayudante" name="ayudante"
+                 list="ayudante-list"
+                 placeholder="Seleccionar o escribir ayudante..."
+                 required autocomplete="off" />
+        </div>
         <datalist id="ayudante-list">
           <option value="GONZALES DENIS">
           <option value="SOSA DARIO">
@@ -183,18 +206,17 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // (Mantenemos toda tu lógica de JS intacta igual que antes)
       const fechaInput = document.getElementById('fecha');
       const today = new Date().toISOString().split('T')[0];
       fechaInput.value = today;
       fechaInput.setAttribute('max', today);
 
+      const areaInput = document.getElementById('area');
+      const solicitadoInput = document.getElementById('solicitado');
       const clienteInput = document.getElementById('cliente');
       const operadorInput = document.getElementById('operador');
       const ayudanteInput = document.getElementById('ayudante');
-      const areaInput = document.getElementById('area');
       const otInput = document.getElementById('ot');
-      const solicitadoInput = document.getElementById('solicitado');
 
       const forceUppercase = (e) => {
         const upper = e.target.value.toUpperCase();
@@ -206,31 +228,11 @@
         }
       };
 
-      const validateDatalist = (inputEl) => {
-        const val = inputEl.value.toUpperCase();
-        const datalist = inputEl.list;
-        if (!datalist) return;
-        if (val.trim() !== '') {
-          const esValido = Array.from(datalist.options).some(opt => opt.value === val);
-          if (!esValido) {
-            inputEl.setCustomValidity('Por favor, seleccioná un valor válido de la lista.');
-          } else {
-            inputEl.setCustomValidity('');
-          }
-        } else {
-          inputEl.setCustomValidity('');
-        }
-      };
-
       areaInput.addEventListener('input', forceUppercase);
       solicitadoInput.addEventListener('input', forceUppercase);
       clienteInput.addEventListener('input', forceUppercase);
       operadorInput.addEventListener('input', forceUppercase);
       ayudanteInput.addEventListener('input', forceUppercase);
-
-      clienteInput.addEventListener('blur', () => validateDatalist(clienteInput));
-      operadorInput.addEventListener('blur', () => validateDatalist(operadorInput));
-      ayudanteInput.addEventListener('blur', () => validateDatalist(ayudanteInput));
 
       otInput.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/[^0-9]/g, '');
@@ -242,38 +244,12 @@
       pozoL.addEventListener('input', (e) => {
         let val = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
         e.target.value = val;
-        if (val.length < 2) {
-          pozoL.setCustomValidity('Ingresá entre 2 y 4 letras (A–Z).');
-        } else {
-          pozoL.setCustomValidity('');
-        }
       });
 
       pozoN.addEventListener('input', (e) => {
         let val = (e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4);
         e.target.value = val;
-        if (val.length !== 4) {
-          pozoN.setCustomValidity('Ingresá exactamente 4 dígitos.');
-        } else {
-          pozoN.setCustomValidity('');
-        }
       });
-
-      function handlePasteNormalize(evt){
-        const text = (evt.clipboardData || window.clipboardData).getData('text') || '';
-        const cleaned = text.toUpperCase().replace(/[^A-Z0-9-]/g,'');
-        const m = cleaned.match(/^([A-Z]{2,4})-?([0-9]{4})$/);
-        if (m){
-          evt.preventDefault();
-          pozoL.value = m[1];
-          pozoN.value = m[2];
-          pozoL.setCustomValidity('');
-          pozoN.setCustomValidity('');
-          pozoN.focus();
-        }
-      }
-      pozoL.addEventListener('paste', handlePasteNormalize);
-      pozoN.addEventListener('paste', handlePasteNormalize);
     });
 
     document.getElementById('inicioForm').addEventListener('submit', (e) => {
@@ -284,9 +260,7 @@
 
       const letras = (document.getElementById('pozo_letras').value || '').toUpperCase();
       const nums   = (document.getElementById('pozo_num').value || '');
-
       const pozoValue = `${letras}-${nums}`;
-      document.getElementById('pozo').value = pozoValue;
 
       const intervencion = {
         fecha: e.target.fecha.value,
@@ -300,31 +274,13 @@
         tuboActual: 1
       };
 
-      const mensajeConfirmacion = `
-      ⚠️ Confirmar datos
-
-      Fecha:\t\t ${intervencion.fecha}
-      Cliente:\t\t ${intervencion.cliente}
-      Área:\t\t ${intervencion.area}
-      Pozo:\t\t ${intervencion.pozo}
-      OT:\t\t ${intervencion.ot}
-      Operador:\t ${intervencion.operador}
-      Ayudante:\t ${intervencion.ayudante}
-      Solicitado:\t ${intervencion.solicitado}
-      ------------------------------------------------------
-
-      Una vez confirmado, no podrás editar esta información.
-      `;
-
-      if (confirm(mensajeConfirmacion)) {
+      if (confirm("¿Confirmar datos de inicio?")) {
         localStorage.setItem('intervencionActual', JSON.stringify(intervencion)); 
         localStorage.setItem('tubos', JSON.stringify([]));
-        localStorage.setItem('editMode', 'false');
-        localStorage.removeItem('editTubeIndex');
-        localStorage.setItem('lastPage', 'findelproceso.html');
+        // Asegurate que desgaste.html exista en minúsculas
         window.location.href = 'desgaste.html';
       } 
     });
   </script>
 </body>
- </html>
+</html>

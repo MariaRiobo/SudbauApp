@@ -10,7 +10,8 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        // CORREGIDO: Se quitó el ./ para asegurar carga en subpáginas
+        navigator.serviceWorker.register('sw.js')
           .then(reg => console.log('Sudbaü App: Modo Operador Activo'))
           .catch(err => console.log('Error al registrar Service Worker', err));
       });
@@ -91,6 +92,13 @@
       font-weight: 700;
     }
 
+    /* CONTENEDOR PARA EL INPUT + OJO */
+    .password-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
     input {
       width: 100%;
       padding: 12px 12px;
@@ -102,9 +110,30 @@
       transition: border-color 0.2s;
     }
 
+    #clave {
+      padding-right: 45px; /* Espacio para el icono */
+    }
+
     input:focus {
       border-width: 2px;
       border-color: var(--blue-dark);
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 15px;
+      cursor: pointer;
+      color: var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    .toggle-password svg {
+      width: 20px;
+      height: 20px;
+      opacity: 0.7;
     }
 
     .row {
@@ -126,7 +155,7 @@
       background: var(--blue);
       color: #fff;
       box-shadow: 0 10px 18px rgba(0,85,170,.25);
-      transition: transform .08s ease, box-shadow .12s ease, filter .12s ease;
+      transition: transform .08s ease;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -134,7 +163,6 @@
 
     .btn:active {
       transform: translateY(1px);
-      box-shadow: 0 7px 14px rgba(0,85,170,.2);
     }
 
     .btn:disabled {
@@ -180,7 +208,14 @@
             <input id="email" type="email" placeholder="nombre@sudbau.com" required />
 
             <label for="clave">Contraseña</label>
-            <input id="clave" type="password" placeholder="••••••••" required />
+            <div class="password-container">
+                <input id="clave" type="password" placeholder="••••••••" required />
+                <div class="toggle-password" id="togglePassword">
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                </div>
+            </div>
 
             <div class="error" id="errorBox"></div>
 
@@ -194,11 +229,9 @@
   </div>
 
   <script type="module">
-    // 1. Importar funciones necesarias (incluyendo signOut)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-    // 2. TU CONFIGURACIÓN DE FIREBASE
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
       authDomain: "sudbau-app.firebaseapp.com",
@@ -209,75 +242,64 @@
       measurementId: "G-8XY511E3JL"
     };
 
-    // Inicializar Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Referencias DOM
     const loginForm = document.getElementById("loginForm");
     const errorBox = document.getElementById("errorBox");
     const btnIngresar = document.getElementById("btnIngresar");
+    const togglePassword = document.getElementById("togglePassword");
+    const passwordInput = document.getElementById("clave");
+    const eyeIcon = document.getElementById("eyeIcon");
 
-    // Lógica de Login
+    // LÓGICA DE VISIBILIDAD CORREGIDA
+    togglePassword.addEventListener("click", () => {
+        const isPassword = passwordInput.type === "password";
+        passwordInput.type = isPassword ? "text" : "password";
+        
+        if (passwordInput.type === "text") {
+            // MOSTRAMOS CONTRASEÑA -> PONEMOS OJO ABIERTO
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            `;
+        } else {
+            // OCULTAMOS CONTRASEÑA -> PONEMOS OJO TACHADO
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+            `;
+        }
+    });
+
     loginForm.addEventListener("submit", async (e) => {
-        e.preventDefault(); // Evita recarga de página
-
-        // Obtenemos valores y convertimos email a minúsculas y sin espacios
+        e.preventDefault();
         const email = document.getElementById("email").value.toLowerCase().trim();
-        const password = document.getElementById("clave").value;
+        const password = passwordInput.value;
 
-        // Resetear UI
         errorBox.style.display = "none";
         btnIngresar.textContent = "Verificando...";
         btnIngresar.disabled = true;
 
         try {
-            // Intentar login con Firebase
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-
-            // =========================================================
-            // 🛑 SEGURIDAD: LISTA BLANCA DE OPERADORES
-            // Solo dejamos pasar si el email es exactamente este:
-            // =========================================================
             const OPERADORES_PERMITIDOS = ["operarios@sudbauapp.com"];
 
             if (!OPERADORES_PERMITIDOS.includes(user.email)) {
-                // Si NO está en la lista (es un cliente o un intruso):
-                await signOut(auth); // Lo desconectamos de inmediato
-                throw new Error("WRONG_PORTAL"); // Lanzamos error personalizado
+                await signOut(auth);
+                throw new Error("WRONG_PORTAL");
             }
 
-            // Si pasa la validación:
-            console.log("Login exitoso y autorizado:", user.email);
-
             localStorage.setItem("userLoggedIn", "true");
-            localStorage.setItem("userEmail", user.email);
-            localStorage.setItem("userUid", user.uid);
-
-            // Redirección al panel de carga de datos
             window.location.href = "InicioSesion.html";
 
         } catch (error) {
-            console.error("Error:", error);
-            
             let mensaje = "Ocurrió un error. Intenta nuevamente.";
-            
-            // Mensaje específico si intentó entrar un cliente
-            if (error.message === "WRONG_PORTAL") {
-                mensaje = "⛔ Acceso denegado. Esta sección es exclusiva para Operadores.";
-            } 
-            else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                mensaje = "Usuario o contraseña incorrectos.";
-            } 
-            else if (error.code === 'auth/too-many-requests') {
-                mensaje = "Demasiados intentos fallidos. Espera unos minutos.";
-            }
+            if (error.message === "WRONG_PORTAL") mensaje = "⛔ Acceso denegado.";
+            else if (error.code?.includes('auth/')) mensaje = "Usuario o contraseña incorrectos.";
 
             errorBox.textContent = mensaje;
             errorBox.style.display = "block";
-            
-            // Restaurar botón
             btnIngresar.textContent = "Ingresar";
             btnIngresar.disabled = false;
         }

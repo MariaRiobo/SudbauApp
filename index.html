@@ -5,6 +5,19 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sudbau App</title>
+  <meta name="description" content="Plataforma de inspección técnica de tubos para Sudbaü Argentina. Control de corrosión y desgaste en tiempo real.">
+
+<meta name="theme-color" content="#0055AA">
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Sudbaü App: Lista para instalar'))
+          .catch(err => console.log('Error al registrar Service Worker', err));
+      });
+    }
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -12,6 +12,18 @@
 
   <title>Tipo de Tubo</title>
 
+  <meta name="theme-color" content="#0055AA">
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Sudbaü App: Modo Operador Activo'))
+          .catch(err => console.log('Error al registrar Service Worker', err));
+      });
+    }
+  </script>
+
   <link rel="stylesheet" href="css/app.css" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">

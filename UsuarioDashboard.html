@@ -34,7 +34,7 @@
     body {
       margin: 0;
       font-family: "Noto Sans", sans-serif;
-      background: var(--bg); /* Fondo oscuro corporativo */
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
@@ -77,7 +77,6 @@
       gap: 16px;
     }
 
-    /* Tarjeta de Inspección */
     .inspection-card {
       background: var(--white);
       border-radius: 16px;
@@ -89,7 +88,7 @@
       position: relative;
       overflow: hidden;
       transition: transform 0.2s, box-shadow 0.2s;
-      cursor: pointer; /* Indica que es clicable */
+      cursor: pointer;
     }
     
     .inspection-card:hover {
@@ -116,6 +115,18 @@
       font-weight: bold;
     }
 
+    /* Animación para el badge de EN CURSO */
+    .live-pulse {
+      background: #28a745;
+      animation: pulse-green 2s infinite;
+    }
+
+    @keyframes pulse-green {
+      0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    }
+
     .pozo-title {
       font-family: "Kanit", sans-serif;
       font-size: 20px;
@@ -138,7 +149,7 @@
       padding-top: 10px;
       border-top: 1px solid #eee;
       display: flex;
-      justify-content: space-between; /* Separar contenido */
+      justify-content: space-between;
       align-items: center;
       font-size: 14px;
     }
@@ -165,18 +176,16 @@
     <button class="logout-btn" id="btnLogout">Cerrar Sesión</button>
   </div>
 
-  <div id="loading">Buscando registros...</div>
+  <div id="loading">Buscando registros en tiempo real...</div>
   <div id="no-data">No se encontraron inspecciones para este cliente.</div>
 
-  <div class="container" id="inspectionsContainer">
-    </div>
+  <div class="container" id="inspectionsContainer"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
     import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-    // 1. Configuración
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
       authDomain: "sudbau-app.firebaseapp.com",
@@ -191,7 +200,6 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // 2. Mapeo: Email Usuario -> Nombre Cliente en Base de Datos
     const CLIENT_MAP = {
       "paesa@sudbauapp.com": "PAESA",
       "paesamendoza@sudbauapp.com": "PAESA MENDOZA",
@@ -212,112 +220,112 @@
     const noData = document.getElementById("no-data");
     const userEmailDisplay = document.getElementById("userEmailDisplay");
 
-    // 3. Verificar sesión
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "usuario.html"; 
         return;
       }
-
       const email = user.email.toLowerCase();
       userEmailDisplay.textContent = email;
-
       const clientName = CLIENT_MAP[email];
 
       if (!clientName) {
         loading.style.display = "none";
-        alert("Usuario no configurado en el sistema de clientes. Contacte a administración.");
+        alert("Usuario no configurado.");
         return;
       }
-
-      console.log(`Cargando datos para: ${clientName}`);
       await cargarInspecciones(clientName);
     });
 
-    // 4. Función para cargar datos de Firestore
     async function cargarInspecciones(clientName) {
       try {
-        const ref = collection(db, "inspecciones");
+        container.innerHTML = "";
         
-        // Query con ordenamiento (requiere índice en Firebase)
-        const q = query(
-          ref, 
+        // 1. Busqueda en Live (SIN orderBy para evitar errores de índice en la reunión)
+        const qLive = query(
+          collection(db, "inspecciones_live"), 
+          where("cliente", "==", clientName)
+        );
+        
+        // 2. Busqueda en Finalizadas
+        const qFinal = query(
+          collection(db, "inspecciones"), 
           where("cliente", "==", clientName),
           orderBy("createdAt", "desc") 
         );
 
-        const snapshot = await getDocs(q);
+        // Lanzamos ambas en paralelo para que sea ultra rápido
+        const [snapLive, snapFinal] = await Promise.all([
+          getDocs(qLive),
+          getDocs(qFinal)
+        ]);
         
         loading.style.display = "none";
 
-        if (snapshot.empty) {
+        if (snapFinal.empty && snapLive.empty) {
           noData.style.display = "block";
           return;
         }
 
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          renderCard(data, doc.id); // Pasamos el ID del documento
+        // Primero mostramos las que están en curso
+        snapLive.forEach(doc => {
+          renderCard(doc.data(), doc.id, true);
+        });
+
+        // Luego las terminadas
+        snapFinal.forEach(doc => {
+          renderCard(doc.data(), doc.id, false);
         });
 
       } catch (error) {
-        console.error("Error al cargar:", error);
-        loading.textContent = "Error al cargar datos. Verifique conexión.";
-        
-        if(error.message.includes("index")) {
-            alert("Administrador: Se requiere crear un índice en Firebase Console.");
-            console.log("Enlace para crear índice:", error.message);
-        }
+        console.error("Error:", error);
+        loading.textContent = "Error al conectar. Intente nuevamente.";
       }
     }
 
-    // 5. Renderizar Tarjeta (MODIFICADO para ser clicable)
-    function renderCard(data, id) {
-      // Formatear fecha
-      let fechaStr = "Sin fecha";
+    function renderCard(data, id, isLive) {
+      let fechaStr = isLive ? "EN CURSO" : "Finalizada";
+      
       if (data.createdAt && data.createdAt.seconds) {
         const d = new Date(data.createdAt.seconds * 1000);
         fechaStr = d.toLocaleDateString("es-AR", { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
 
+      // IMPORTANTE: tuboActual es el campo que se actualiza en vivo
+      const totalTubos = data.tuboActual || data.tubosCount || 0;
+
       const card = document.createElement("div");
       card.className = "inspection-card";
       
-      // EVENTO CLICK: Redirigir al detalle pasando el ID
       card.addEventListener("click", () => {
-          window.location.href = `DetalleInspeccion.html?id=${id}`;
+          // Pasamos el parámetro live=true para que el Detalle sepa buscar en la carpeta correcta
+          window.location.href = `DetalleInspeccion.html?id=${id}${isLive ? '&live=true' : ''}`;
       });
 
-      // Construimos el HTML interno
       card.innerHTML = `
         <div class="card-header">
             <h2 class="pozo-title">Pozo: ${data.pozo || "S/D"}</h2>
-            <span class="date-badge">${fechaStr}</span>
+            <span class="date-badge ${isLive ? 'live-pulse' : ''}">${isLive ? 'EN VIVO' : fechaStr}</span>
         </div>
         
         <div class="info-grid">
             <div class="info-item"><b>OT:</b> ${data.ot || "-"}</div>
             <div class="info-item"><b>Área:</b> ${data.area || "-"}</div>
-            <div class="info-item"><b>Solicitado por:</b> ${data.solicitado || "-"}</div>
             <div class="info-item"><b>Operador:</b> ${data.operador || "-"}</div>
+            <div class="info-item"><b>Estado:</b> ${isLive ? 'Actualizando...' : 'Completado'}</div>
         </div>
 
         <div class="stat-row">
-            <div>📦 <b>${data.tubosCount || 0}</b> Tubos</div>
+            <div>📦 Tubo Actual: <b>${totalTubos}</b></div>
             <div class="link-detail">Ver detalle →</div>
         </div>
       `;
-
       container.appendChild(card);
     }
 
-    // 6. Cerrar Sesión
     document.getElementById("btnLogout").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html"; // O usuario.html
-      });
+      signOut(auth).then(() => { window.location.href = "index.html"; });
     });
-
   </script>
 </body>
 </html>

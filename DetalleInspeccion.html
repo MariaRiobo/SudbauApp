@@ -136,9 +136,10 @@
       font-size: 11px;
       font-weight: bold;
     }
-    .badge-gray { background: #E5E7EB; color: #374151; } /* Sin novedad */
-    .badge-red { background: #FEE2E2; color: #991B1B; }  /* Daño/Problema */
-    .badge-blue { background: #DBEAFE; color: #1E40AF; } /* Info */
+    .badge-gray { background: #E5E7EB; color: #374151; }
+    .badge-red { background: #FEE2E2; color: #991B1B; }
+    .badge-blue { background: #DBEAFE; color: #1E40AF; }
+    .badge-live { background: #DCFCE7; color: #166534; border: 1px solid #166534; }
 
     #loading { text-align: center; font-size: 18px; color: #666; padding: 40px; }
   </style>
@@ -147,14 +148,17 @@
 
   <div class="container">
     <div class="header-nav">
-      <a href="UsuarioDashboard.html" class="btn-back">← Volver al Dashboard</a>
+      <a href="DashboardCliente.html" class="btn-back">← Volver al Dashboard</a>
       <img src="img/logoHorizontal.png" alt="Logo" style="height:30px;">
     </div>
 
     <div id="loading">Cargando detalles de la inspección...</div>
 
     <div id="content" style="display: none;">
-      <h1 id="tituloPozo">Pozo: ...</h1>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+          <h1 id="tituloPozo">Pozo: ...</h1>
+          <span id="badgeLive" class="badge badge-live" style="display:none;">EN VIVO</span>
+      </div>
       <p style="margin-top:0; color:#666;" id="subtituloFecha">...</p>
 
       <div class="summary-grid">
@@ -179,8 +183,7 @@
               <th>Observaciones / Justif.</th>
             </tr>
           </thead>
-          <tbody id="tablaCuerpo">
-            </tbody>
+          <tbody id="tablaCuerpo"></tbody>
         </table>
       </div>
     </div>
@@ -189,9 +192,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-    // 1. Configuración
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
       authDomain: "sudbau-app.firebaseapp.com",
@@ -206,93 +208,131 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // 2. Obtener ID de la URL
     const params = new URLSearchParams(window.location.search);
     const docId = params.get('id');
+    const esLiveUrl = params.get('live') === 'true'; // Detectamos si viene del radar Live
 
     if (!docId) {
       alert("No se especificó una inspección.");
-      window.location.href = "UsuarioDashboard.html";
+      window.location.href = "DashboardCliente.html";
     }
 
-    // 3. Verificar Sesión (Seguridad)
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "usuario.html"; 
         return;
       }
-      // Cargar datos
       cargarDetalle(docId);
     });
 
     async function cargarDetalle(id) {
       try {
-        const docRef = doc(db, "inspecciones", id);
-        const docSnap = await getDoc(docRef);
+        let docSnap;
+        let coleccionUtilizada = "";
+
+        // 1. Lógica de búsqueda Dual
+        if (esLiveUrl) {
+            docSnap = await getDoc(doc(db, "inspecciones_live", id));
+            coleccionUtilizada = "inspecciones_live";
+        }
+
+        if (!docSnap || !docSnap.exists()) {
+            docSnap = await getDoc(doc(db, "inspecciones", id));
+            coleccionUtilizada = "inspecciones";
+        }
+
+        // Fallback final por si acaso
+        if (!docSnap.exists()) {
+            docSnap = await getDoc(doc(db, "inspecciones_live", id));
+            coleccionUtilizada = "inspecciones_live";
+        }
 
         if (!docSnap.exists()) {
-          document.getElementById("loading").textContent = "El documento no existe o fue borrado.";
+          document.getElementById("loading").textContent = "El documento no existe en ninguna colección.";
           return;
         }
 
         const data = docSnap.data();
-        mostrarDatos(data);
+        await mostrarDatos(data, id, coleccionUtilizada);
 
       } catch (e) {
         console.error(e);
-        document.getElementById("loading").textContent = "Error al leer datos.";
+        document.getElementById("loading").textContent = "Error al leer datos de la base.";
       }
     }
 
-    function mostrarDatos(data) {
+    async function mostrarDatos(data, id, colName) {
       document.getElementById("loading").style.display = "none";
       document.getElementById("content").style.display = "block";
 
-      // Llenar Cabecera
+      if (colName === "inspecciones_live") {
+          document.getElementById("badgeLive").style.display = "inline-block";
+      }
+
       document.getElementById("tituloPozo").textContent = `Pozo: ${data.pozo || "Sin Datos"}`;
       
-      let fecha = "";
+      let fecha = "En curso...";
       if (data.createdAt && data.createdAt.seconds) {
         fecha = new Date(data.createdAt.seconds * 1000).toLocaleString();
       }
-      document.getElementById("subtituloFecha").textContent = `Inspección realizada el: ${fecha}`;
+      document.getElementById("subtituloFecha").textContent = `Fecha: ${fecha}`;
 
       document.getElementById("valCliente").textContent = data.cliente || "-";
       document.getElementById("valArea").textContent = data.area || "-";
       document.getElementById("valOT").textContent = data.ot || "-";
       document.getElementById("valSolicitado").textContent = data.solicitado || "-";
       document.getElementById("valOperador").textContent = data.operador || "-";
-      document.getElementById("valTotal").textContent = data.tubosCount || "0";
+      document.getElementById("valTotal").textContent = data.tuboActual || data.tubosCount || "0";
 
-      // Llenar Tabla
       const tbody = document.getElementById("tablaCuerpo");
-      const tubos = data.tubos || [];
+      tbody.innerHTML = ""; // Limpiar
 
-      // Ordenar por número de tubo (opcional, pero recomendado)
-      tubos.sort((a, b) => Number(a.nro) - Number(b.nro));
+      // --- TRATAMIENTO DE TUBOS SEGÚN COLECCIÓN ---
+      let listaParaMostrar = [];
 
-      tubos.forEach(t => {
-        // En findeproceso.html guardamos la data útil dentro de 'draft'
-        const d = t.draft || {}; 
-        
+      if (colName === "inspecciones_live") {
+          // En LIVE, los tubos están en una SUBCOLECCIÓN llamada 'tubos'
+          const subSnap = await getDocs(collection(db, colName, id, "tubos"));
+          subSnap.forEach(tDoc => {
+              const d = tDoc.data();
+              listaParaMostrar.push({
+                  nro: d.tuboNro || d.nro,
+                  tipo: d.tipo || "-",
+                  desgaste: d.desgaste || "-",
+                  corrosion: d.corrosion || "-",
+                  cupla: d.cupla_status || d.cupla || "-",
+                  justif: d.justificacion || ""
+              });
+          });
+      } else {
+          // En FINALIZADAS, los tubos suelen estar en un ARRAY dentro del documento
+          const tubosArray = data.tubos || [];
+          tubosArray.forEach(t => {
+              const d = t.draft || t; 
+              listaParaMostrar.push({
+                  nro: t.nro || d.tuboNro,
+                  tipo: d.tipo || "-",
+                  desgaste: d.desgaste || "-",
+                  corrosion: d.corrosion || "-",
+                  cupla: d.cupla_status || d.cupla || "-",
+                  justif: d.justificacion || ""
+              });
+          });
+      }
+
+      // Ordenar por número
+      listaParaMostrar.sort((a, b) => Number(a.nro) - Number(b.nro));
+
+      listaParaMostrar.forEach(t => {
         const tr = document.createElement("tr");
-
-        // Helpers para formatear si está vacío
-        const tipo = d.tipo || "-";
-        const desgaste = d.desgaste || "-";
-        const corrosion = d.corrosion || "-";
-        const cupla = d.cupla_status || d.cupla || "-"; // A veces se guarda como status
-        const justif = d.justificacion || "";
-
-        // Estilo simple: si hay justificación, ponerlo en negrita o color
-        const obsHtml = justif ? `<span class="badge badge-blue">${justif}</span>` : "-";
+        const obsHtml = t.justif ? `<span class="badge badge-blue">${t.justif}</span>` : "-";
 
         tr.innerHTML = `
           <td><b>${t.nro}</b></td>
-          <td>${tipo}</td>
-          <td>${desgaste}</td>
-          <td>${corrosion}</td>
-          <td>${cupla}</td>
+          <td>${t.tipo}</td>
+          <td>${t.desgaste}</td>
+          <td>${t.corrosion}</td>
+          <td>${t.cupla}</td>
           <td>${obsHtml}</td>
         `;
         tbody.appendChild(tr);

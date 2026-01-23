@@ -50,7 +50,6 @@
       box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
 
-    /* Header */
     .header-nav {
       display: flex;
       justify-content: space-between;
@@ -77,7 +76,6 @@
       font-size: 24px;
     }
 
-    /* Resumen Grid */
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -101,43 +99,63 @@
       font-weight: 500;
     }
 
-    /* Tabla */
-    .table-responsive {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-
-    thead {
-      background: var(--blue-1);
-      color: white;
-    }
-
-    th, td {
-      padding: 12px 15px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-    }
-
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead { background: var(--blue-1); color: white; }
+    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
     th { font-family: "Kanit", sans-serif; font-weight: 500; }
-    
     tr:nth-child(even) { background-color: #F9FAFB; }
     tr:hover { background-color: #F0F9FF; }
 
-    /* Estado visual */
-    .badge {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
+    /* --- ÓVALOS CON TAMAÑO GRADUAL --- */
+    .oval-badge {
+      display: inline-block;
+      border-radius: 20px;
       font-weight: bold;
+      font-size: 11px;
+      color: white;
+      text-align: center;
+      text-transform: uppercase;
     }
-    .badge-gray { background: #E5E7EB; color: #374151; }
-    .badge-red { background: #FEE2E2; color: #991B1B; }
+
+    /* G2: Pequeño y Amarillo */
+    .oval-g2 { 
+      background-color: #FFD700; 
+      color: #000; 
+      padding: 3px 12px; 
+      min-width: 40px;
+      border: 1px solid #DAA520;
+    }
+    /* G3: Mediano y Azul */
+    .oval-g3 { 
+      background-color: #0055AA; 
+      padding: 4px 18px; 
+      min-width: 60px;
+    }
+    /* G4: Grande y Verde */
+    .oval-g4 { 
+      background-color: #28a745; 
+      padding: 5px 24px; 
+      min-width: 80px;
+    }
+    /* G5: El más grande y Rojo (Máxima alerta) */
+    .oval-g5 { 
+      background-color: #dc3545; 
+      padding: 6px 32px; 
+      min-width: 100px;
+      box-shadow: 0 2px 5px rgba(220, 53, 69, 0.3);
+    }
+    /* Ungrade: Sutil y gris */
+    .oval-none { 
+      background-color: #E5E7EB; 
+      color: #6B7280; 
+      padding: 2px 10px;
+      font-weight: normal;
+    }
+
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+    .badge-defect { background: #FEE2E2; color: #991B1B; border: 1px solid #F87171; text-transform: uppercase; }
+    .badge-ok { color: #166534; font-weight: bold; }
     .badge-blue { background: #DBEAFE; color: #1E40AF; }
     .badge-live { background: #DCFCE7; color: #166534; border: 1px solid #166534; }
 
@@ -210,11 +228,11 @@
 
     const params = new URLSearchParams(window.location.search);
     const docId = params.get('id');
-    const esLiveUrl = params.get('live') === 'true'; // Detectamos si viene del radar Live
+    const esLiveUrl = params.get('live') === 'true';
 
     if (!docId) {
       alert("No se especificó una inspección.");
-      window.location.href = "DashboardCliente.html";
+      window.location.href = "UsuarioDashboard.html";
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -225,12 +243,33 @@
       cargarDetalle(docId);
     });
 
+    function formatGradoGradual(valor) {
+      if (!valor || valor === "-") return "-";
+      const v = valor.toUpperCase().trim();
+      let claseOval = "oval-none";
+      
+      if (v === "G2") claseOval = "oval-g2";
+      else if (v === "G3") claseOval = "oval-g3";
+      else if (v === "G4") claseOval = "oval-g4";
+      else if (v === "G5") claseOval = "oval-g5";
+
+      return `<span class="oval-badge ${claseOval}">${v}</span>`;
+    }
+
+    function formatCuplaOval(valor) {
+      if (!valor || valor === "-") return "-";
+      const v = valor.toLowerCase();
+      if (v.includes("defect") || v.includes("mala") || v.includes("daño") || v.includes("no")) {
+        return `<span class="badge badge-defect">${valor.toUpperCase()}</span>`;
+      }
+      return `<span class="badge-ok">${valor}</span>`;
+    }
+
     async function cargarDetalle(id) {
       try {
         let docSnap;
         let coleccionUtilizada = "";
 
-        // 1. Lógica de búsqueda Dual
         if (esLiveUrl) {
             docSnap = await getDoc(doc(db, "inspecciones_live", id));
             coleccionUtilizada = "inspecciones_live";
@@ -241,14 +280,8 @@
             coleccionUtilizada = "inspecciones";
         }
 
-        // Fallback final por si acaso
         if (!docSnap.exists()) {
-            docSnap = await getDoc(doc(db, "inspecciones_live", id));
-            coleccionUtilizada = "inspecciones_live";
-        }
-
-        if (!docSnap.exists()) {
-          document.getElementById("loading").textContent = "El documento no existe en ninguna colección.";
+          document.getElementById("loading").textContent = "El documento no existe.";
           return;
         }
 
@@ -257,7 +290,7 @@
 
       } catch (e) {
         console.error(e);
-        document.getElementById("loading").textContent = "Error al leer datos de la base.";
+        document.getElementById("loading").textContent = "Error al leer datos.";
       }
     }
 
@@ -285,13 +318,11 @@
       document.getElementById("valTotal").textContent = data.tuboActual || data.tubosCount || "0";
 
       const tbody = document.getElementById("tablaCuerpo");
-      tbody.innerHTML = ""; // Limpiar
+      tbody.innerHTML = ""; 
 
-      // --- TRATAMIENTO DE TUBOS SEGÚN COLECCIÓN ---
       let listaParaMostrar = [];
 
       if (colName === "inspecciones_live") {
-          // En LIVE, los tubos están en una SUBCOLECCIÓN llamada 'tubos'
           const subSnap = await getDocs(collection(db, colName, id, "tubos"));
           subSnap.forEach(tDoc => {
               const d = tDoc.data();
@@ -305,7 +336,6 @@
               });
           });
       } else {
-          // En FINALIZADAS, los tubos suelen estar en un ARRAY dentro del documento
           const tubosArray = data.tubos || [];
           tubosArray.forEach(t => {
               const d = t.draft || t; 
@@ -320,7 +350,6 @@
           });
       }
 
-      // Ordenar por número
       listaParaMostrar.sort((a, b) => Number(a.nro) - Number(b.nro));
 
       listaParaMostrar.forEach(t => {
@@ -330,9 +359,9 @@
         tr.innerHTML = `
           <td><b>${t.nro}</b></td>
           <td>${t.tipo}</td>
-          <td>${t.desgaste}</td>
-          <td>${t.corrosion}</td>
-          <td>${t.cupla}</td>
+          <td>${formatGradoGradual(t.desgaste)}</td>
+          <td>${formatGradoGradual(t.corrosion)}</td>
+          <td>${formatCuplaOval(t.cupla)}</td>
           <td>${obsHtml}</td>
         `;
         tbody.appendChild(tr);

@@ -240,8 +240,10 @@
     async function cargarInspecciones(clientName) {
       try {
         container.innerHTML = "";
+        loading.style.display = "block";
+        noData.style.display = "none";
         
-        // 1. Busqueda en Live (SIN orderBy para evitar errores de índice en la reunión)
+        // 1. Busqueda en Live
         const qLive = query(
           collection(db, "inspecciones_live"), 
           where("cliente", "==", clientName)
@@ -254,7 +256,6 @@
           orderBy("createdAt", "desc") 
         );
 
-        // Lanzamos ambas en paralelo para que sea ultra rápido
         const [snapLive, snapFinal] = await Promise.all([
           getDocs(qLive),
           getDocs(qFinal)
@@ -262,19 +263,41 @@
         
         loading.style.display = "none";
 
-        if (snapFinal.empty && snapLive.empty) {
+        // --- LÓGICA DE ORDEN Y LIMPIEZA ---
+        const idsFinalizados = new Set();
+        let listaLive = [];
+        let listaFinal = [];
+        
+        // Primero procesamos las FINALIZADAS y guardamos sus IDs
+        snapFinal.forEach(doc => {
+          idsFinalizados.add(doc.id);
+          listaFinal.push({ data: doc.data(), id: doc.id });
+        });
+
+        // Luego las LIVE, pero SOLO si NO están ya en finalizadas Y su estado no es "FINALIZADA"
+        snapLive.forEach(doc => {
+          const data = doc.data();
+          // Verificamos si el ID ya existe en terminados o si el campo estado dice "FINALIZADA"
+          const yaTermino = idsFinalizados.has(doc.id) || data.estado === "FINALIZADA";
+          
+          if (!yaTermino) {
+            listaLive.push({ data: data, id: doc.id });
+          }
+        });
+
+        if (listaLive.length === 0 && listaFinal.length === 0) {
           noData.style.display = "block";
           return;
         }
 
-        // Primero mostramos las que están en curso
-        snapLive.forEach(doc => {
-          renderCard(doc.data(), doc.id, true);
+        // RENDERIZAMOS: Primero todas las LIVE (aparecerán arriba)
+        listaLive.forEach(item => {
+          renderCard(item.data, item.id, true);
         });
 
-        // Luego las terminadas
-        snapFinal.forEach(doc => {
-          renderCard(doc.data(), doc.id, false);
+        // Luego todas las FINALIZADAS
+        listaFinal.forEach(item => {
+          renderCard(item.data, item.id, false);
         });
 
       } catch (error) {
@@ -298,7 +321,6 @@
       card.className = "inspection-card";
       
       card.addEventListener("click", () => {
-          // Pasamos el parámetro live=true para que el Detalle sepa buscar en la carpeta correcta
           window.location.href = `DetalleInspeccion.html?id=${id}${isLive ? '&live=true' : ''}`;
       });
 

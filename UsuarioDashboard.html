@@ -29,6 +29,7 @@
       --white: #FFFFFF;
       --text: #0F0F14;
       --gray: #CDCDDC;
+      --danger: #D93025;
     }
 
     body {
@@ -115,7 +116,6 @@
       font-weight: bold;
     }
 
-    /* Animación para el badge de EN CURSO */
     .live-pulse {
       background: #28a745;
       animation: pulse-green 2s infinite;
@@ -125,6 +125,28 @@
       0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
       70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
       100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    }
+
+    /* ESTILOS DEL CARTEL DE PARADA */
+    .aviso-parada-card {
+      background: #FFF4F4;
+      border: 1px solid #FFCCCC;
+      border-left: 5px solid var(--danger);
+      padding: 12px;
+      margin: 5px 0;
+      border-radius: 8px;
+    }
+    .aviso-parada-card b { 
+      color: var(--danger); 
+      font-size: 14px; 
+      display: block;
+      margin-bottom: 4px;
+    }
+    .aviso-parada-card p { 
+      margin: 0; 
+      font-size: 13px; 
+      color: #333;
+      line-height: 1.4;
     }
 
     .pozo-title {
@@ -243,13 +265,11 @@
         loading.style.display = "block";
         noData.style.display = "none";
         
-        // 1. Busqueda en Live
         const qLive = query(
           collection(db, "inspecciones_live"), 
           where("cliente", "==", clientName)
         );
         
-        // 2. Busqueda en Finalizadas
         const qFinal = query(
           collection(db, "inspecciones"), 
           where("cliente", "==", clientName),
@@ -263,23 +283,18 @@
         
         loading.style.display = "none";
 
-        // --- LÓGICA DE ORDEN Y LIMPIEZA ---
         const idsFinalizados = new Set();
         let listaLive = [];
         let listaFinal = [];
         
-        // Primero procesamos las FINALIZADAS y guardamos sus IDs
         snapFinal.forEach(doc => {
           idsFinalizados.add(doc.id);
           listaFinal.push({ data: doc.data(), id: doc.id });
         });
 
-        // Luego las LIVE, pero SOLO si NO están ya en finalizadas Y su estado no es "FINALIZADA"
         snapLive.forEach(doc => {
           const data = doc.data();
-          // Verificamos si el ID ya existe en terminados o si el campo estado dice "FINALIZADA"
           const yaTermino = idsFinalizados.has(doc.id) || data.estado === "FINALIZADA";
-          
           if (!yaTermino) {
             listaLive.push({ data: data, id: doc.id });
           }
@@ -290,15 +305,8 @@
           return;
         }
 
-        // RENDERIZAMOS: Primero todas las LIVE (aparecerán arriba)
-        listaLive.forEach(item => {
-          renderCard(item.data, item.id, true);
-        });
-
-        // Luego todas las FINALIZADAS
-        listaFinal.forEach(item => {
-          renderCard(item.data, item.id, false);
-        });
+        listaLive.forEach(item => renderCard(item.data, item.id, true));
+        listaFinal.forEach(item => renderCard(item.data, item.id, false));
 
       } catch (error) {
         console.error("Error:", error);
@@ -314,8 +322,30 @@
         fechaStr = d.toLocaleDateString("es-AR", { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
 
-      // IMPORTANTE: tuboActual es el campo que se actualiza en vivo
       const totalTubos = data.tuboActual || data.tubosCount || 0;
+
+      // --- NUEVA LÓGICA DE DETECCIÓN DE PARADA DESDE EL ARRAY DE TUBOS ---
+      let htmlParada = '';
+      let estadoTxt = isLive ? 'OPERANDO' : 'Completado';
+
+      if (isLive && data.tubos && data.tubos.length > 0) {
+          const idx = (data.tuboActual || 1) - 1;
+          const tuboActualData = data.tubos[idx];
+
+          // Si el tubo tiene parada pero no tiene arranque, mostramos el cartel
+          if (tuboActualData && tuboActualData.draft && tuboActualData.draft.paradaAt && !tuboActualData.draft.arranqueAt) {
+              estadoTxt = 'DETENIDO';
+              const horaParada = new Date(tuboActualData.draft.paradaAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const motivoParada = tuboActualData.draft.justificacion || "MOTIVO EN PROCESO...";
+
+              htmlParada = `
+                <div class="aviso-parada-card">
+                    <b>⚠️ SERVICIO SUSPENDIDO - ${horaParada} HS</b>
+                    <p>Motivo: ${motivoParada}</p>
+                </div>
+              `;
+          }
+      }
 
       const card = document.createElement("div");
       card.className = "inspection-card";
@@ -334,8 +364,10 @@
             <div class="info-item"><b>OT:</b> ${data.ot || "-"}</div>
             <div class="info-item"><b>Área:</b> ${data.area || "-"}</div>
             <div class="info-item"><b>Operador:</b> ${data.operador || "-"}</div>
-            <div class="info-item"><b>Estado:</b> ${isLive ? 'Actualizando...' : 'Completado'}</div>
+            <div class="info-item"><b>Estado:</b> <span style="color: ${estadoTxt === 'DETENIDO' ? '#D93025' : 'inherit'}; font-weight: bold;">${estadoTxt}</span></div>
         </div>
+
+        ${htmlParada}
 
         <div class="stat-row">
             <div>📦 Tubo Actual: <b>${totalTubos}</b></div>

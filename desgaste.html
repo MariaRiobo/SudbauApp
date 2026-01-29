@@ -66,6 +66,11 @@
       box-shadow: none;
       transform: none;
     }
+    .btn-justificar.success {
+      background-color: #28a745 !important;
+      color: white !important;
+      border: none;
+    }
   </style>
 </head>
 
@@ -151,7 +156,22 @@
     <button class="btn-arranque" style="display:none;">Arranque</button>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
     /* ===== Local Storage Helpers ===== */
     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
@@ -183,7 +203,9 @@
       localStorage.setItem('tubos', JSON.stringify(arr));
     }
     function ensureTubeIndex(tubes, idx) {
-      while (tubes.length <= idx) tubes.push({ nro: tubes.length + 1, draft: {}, completedAt: null });
+      while (tubes.length <= idx) {
+        tubes.push({ nro: tubes.length + 1, draft: {}, completedAt: null });
+      }
       return tubes[idx];
     }
     function currentTubeIndex(itv) {
@@ -215,7 +237,6 @@
     const numeroTuboSpan = document.getElementById('numero-tubo');
     if (itv && numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
 
-    // precargar draft del tubo (modo edición etc.)
     if (itv) syncDraftFromTube();
 
     const justificacionContainer = document.querySelector('.justificacion-container');
@@ -242,11 +263,12 @@
 
       btnParada.disabled = true;
       btnJustificar.disabled = true;
+      
+      btnJustificar.textContent = "Justificar";
+      btnJustificar.classList.remove('success');
 
-      // ✅ evento por tubo
       pushEvento('parada');
 
-      // ✅ guardar ParadaAt por tubo
       const pack = getCurrentTube();
       if (pack) {
         const { tubes, idx, t } = pack;
@@ -257,7 +279,6 @@
       }
     });
 
-    // Volver al tubo anterior
     btnVolver.addEventListener('click', (e) => {
       if (btnVolver.classList.contains('desactivado')) {
         e.preventDefault();
@@ -280,7 +301,7 @@
       saveIntervencion(itv);
       pushEvento('volverACupla', { tuboDestino: anterior });
 
-      window.location.href = 'Cupla.html';
+      window.location.href = 'cupla.html';
     });
 
     function forceUppercase(e) {
@@ -295,6 +316,8 @@
     }
 
     function updateJustificarState() {
+      if (btnJustificar.classList.contains('success')) return;
+
       const listaVal = listaJustificacion.value.trim().toUpperCase();
 
       if (listaVal === 'OTROS') {
@@ -318,7 +341,8 @@
       updateJustificarState();
     });
 
-    btnJustificar.addEventListener('click', () => {
+    // LOGICA PARA EL BOTÓN DE JUSTIFICAR (ACTUALIZADO)
+    btnJustificar.addEventListener('click', async () => {
       const listaVal = listaJustificacion.value.trim().toUpperCase();
       let justificacionFinal = '';
 
@@ -329,28 +353,43 @@
       }
       if (!justificacionFinal) return;
 
-      // ✅ guardado técnico: "STANDBY - ..."
       const guardado = `STANDBY - ${justificacionFinal}`;
 
-      // mostrar botón arranque
       btnArranque.style.display = 'block';
+      btnJustificar.disabled = true;
+      btnJustificar.textContent = "JUSTIFICADO ✅";
+      btnJustificar.classList.add('success');
 
-      // evento por tubo
       pushEvento('justificacion', { texto: guardado });
 
-      // guardar también en el draft del tubo (por si querés verlo desde ahí)
       const pack = getCurrentTube();
       if (pack) {
-        const { tubes, idx, t } = pack;
+        const { tubes, idx, t, itv } = pack;
         t.draft = t.draft || {};
         t.draft.justificacion = guardado;
         tubes[idx] = t;
         saveTubes(tubes);
+
+        // --- SUBIDA A FIREBASE ---
+        if (itv.id) {
+          try {
+            const docRef = doc(db, "inspecciones_live", itv.id);
+            await updateDoc(docRef, {
+              paradaAt: t.draft.paradaAt,
+              justificacion: guardado,
+              arranqueAt: null,
+              tubos: tubes // <--- NO TOCAMOS NADA, SOLO AGREGAMOS ESTO
+            });
+          } catch (error) { console.error("Error al subir a Firebase:", error); }
+        }
       }
+
+      alert("✅ Justificación guardada. Ahora puede presionar el botón de ARRANQUE.");
     });
 
-    btnArranque.addEventListener('click', () => {
+    btnArranque.addEventListener('click', async () => {
       const now = new Date();
+      const itv_actual = loadIntervencion();
 
       botonesColor.forEach(btn => btn.classList.remove('desactivado'));
       btnVolver.classList.remove('desactivado');
@@ -363,12 +402,13 @@
       listaJustificacion.value = '';
       txtJustificacionOtros.value = '';
       txtJustificacionOtros.style.display = 'none';
+      
       btnJustificar.disabled = true;
+      btnJustificar.textContent = "Justificar";
+      btnJustificar.classList.remove('success');
 
-      // ✅ evento por tubo
       pushEvento('arranque');
 
-      // ✅ guardar ArranqueAt por tubo
       const pack = getCurrentTube();
       if (pack) {
         const { tubes, idx, t } = pack;
@@ -376,12 +416,20 @@
         t.draft.arranqueAt = now.toISOString();
         tubes[idx] = t;
         saveTubes(tubes);
+
+        // --- SUBIDA A FIREBASE (ARRANQUE) ---
+        if (itv_actual.id) {
+          try {
+            const docRef = doc(db, "inspecciones_live", itv_actual.id);
+            await updateDoc(docRef, {
+              arranqueAt: now.toISOString(),
+              tubos: tubes // <--- TAMBIEN ACTUALIZAMOS TUBOS AQUI
+            });
+          } catch (error) { console.error("Error al subir arranque:", error); }
+        }
       }
     });
 
-    /* =========================================================
-      Guardar desgaste como G2/G3/G4/G5/UNGRADE (no colores)
-    ========================================================= */
     const DESGASTE_MAP = {
       amarillo: 'G2',
       azul: 'G3',
@@ -404,10 +452,7 @@
 
         itv2.draft.desgaste = desgaste;
         saveIntervencion(itv2);
-
-        // persistir en tubos[]
         syncTubeFromDraft();
-
         pushEvento('desgasteSeleccionado', { desgaste });
 
         window.location.href = e.currentTarget.getAttribute('href');

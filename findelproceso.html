@@ -57,7 +57,6 @@
     }
   </style>
 
-  <!-- ✅ Firebase (Firestore) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getFirestore } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
@@ -104,9 +103,9 @@
 
   <script>
     /* =========================================================
-      ✅ CONFIG: SheetBest URL
+      ❌ SHEETBEST DESACTIVADO (PRUEBA FINALIZADA)
     ========================================================= */
-    const SHEETBEST_URL = "https://api.sheetbest.com/sheets/39f795ed-d2b5-429a-8026-4cd586a9597b";
+    const SHEETBEST_URL = ""; 
 
     /* ===== LocalStorage helpers ===== */
     function loadIntervencion() {
@@ -179,42 +178,6 @@
     });
 
     /* =========================================================
-      Eventos: agrupar por tubo para que no se copie en todos
-    ========================================================= */
-    function getEventos() {
-      const itv = loadIntervencion();
-      return Array.isArray(itv?.eventos) ? itv.eventos : [];
-    }
-
-    function agruparEventosPorTubo(eventos) {
-      const map = new Map();
-      for (const e of eventos) {
-        const tuboNro = Number(e.tubo || 0);
-        if (!tuboNro) continue;
-
-        if (!map.has(tuboNro)) map.set(tuboNro, { paradas: 0, justifs: [], paradasAt: [], arranquesAt: [] });
-        const acc = map.get(tuboNro);
-
-        if (e.tipo === 'parada') {
-          acc.paradas += 1;
-          if (e.at) acc.paradasAt.push(e.at);
-        }
-        if (e.tipo === 'justificacion') {
-          const txt = (e.texto || "").toString().trim();
-          if (txt) acc.justifs.push(txt);
-        }
-        if (e.tipo === 'arranque') {
-          if (e.at) acc.arranquesAt.push(e.at);
-        }
-      }
-      return map;
-    }
-
-    function ultimo(arr) {
-      return Array.isArray(arr) && arr.length ? arr[arr.length - 1] : "";
-    }
-
-    /* =========================================================
       ✅ Firestore
     ========================================================= */
     async function guardarEnFirestore(payload, docIdAmigable) {
@@ -223,13 +186,14 @@
       );
 
       const db = window.SUDBAU_DB;
-      if (!db) throw new Error("Firestore no inicializado (window.SUDBAU_DB es undefined)");
+      if (!db) throw new Error("Firestore no inicializado");
 
       const ref = doc(collection(db, "inspecciones"), docIdAmigable);
 
       await setDoc(ref, {
         ...payload,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        estado: "FINALIZADA" // Marcamos como finalizada
       });
 
       return ref.id;
@@ -246,85 +210,7 @@
       return `SUD-${y}${m}${day}-${hh}${mm}${ss}`;
     }
 
-    /* =========================================================
-      ✅ SheetBest: 1 fila por tubo
-      (sin fecha)
-      Columnas sugeridas:
-      Tubo nro | Id | createdAt | cliente | pozo | area | ot | operador | ayudante | solicitado
-      | tubosCount | paradasCount | ParadaAt | ArranqueAt | justificaciones
-      | Desgaste | Corrosión | Tipo | Cupla
-    ========================================================= */
-    async function enviarFilaSheetBest(obj) {
-      const resp = await fetch(SHEETBEST_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(obj)
-      });
-
-      if (!resp.ok) {
-        const txt = await resp.text().catch(() => "");
-        throw new Error(`SheetBest error ${resp.status} ${txt}`);
-      }
-    }
-
-    async function enviarReporteASheets(docId) {
-      const itv = loadIntervencion();
-      const tubos = loadTubes();
-      const eventos = getEventos();
-      const eventosPorTubo = agruparEventosPorTubo(eventos);
-
-      const createdAtISO = new Date().toISOString();
-      const tubosCount = Array.isArray(tubos) ? tubos.length : 0;
-
-      for (const t of tubos) {
-        const d = (t && t.draft) ? t.draft : {};
-        const acc = eventosPorTubo.get(Number(t.nro)) || { paradas: 0, justifs: [], paradasAt: [], arranquesAt: [] };
-
-        // Por tubo
-        const paradasCount = acc.paradas || 0;
-
-        // ✅ ParadaAt / ArranqueAt: prioridad draft.*At (por tubo), fallback eventos
-        const paradaAt = d.paradaAt || ultimo(acc.paradasAt) || "";
-        const arranqueAt = d.arranqueAt || ultimo(acc.arranquesAt) || "";
-
-        // ✅ justificaciones por tubo (ya vienen como "STANDBY - ...")
-        // si también guardaste draft.justificacion, lo incluimos sin duplicar
-        const justifs = Array.isArray(acc.justifs) ? [...acc.justifs] : [];
-        if (d.justificacion && !justifs.includes(d.justificacion)) justifs.push(d.justificacion);
-        const justificaciones = justifs.join(" | ");
-
-        const fila = {
-          "Tubo nro": t.nro || "",
-          "Id": docId,
-          "createdAt": createdAtISO,
-
-          "cliente": itv?.cliente || "",
-          "pozo": itv?.pozo || "",
-          "area": itv?.area || "",
-          "ot": itv?.ot || "",
-          "operador": itv?.operador || "",
-          "ayudante": itv?.ayudante || "",
-          "solicitado": itv?.solicitado || "",
-
-          "tubosCount": tubosCount,
-          "paradasCount": paradasCount,
-
-          "ParadaAt": paradaAt,
-          "ArranqueAt": arranqueAt,
-
-          "justificaciones": justificaciones,
-
-          "Desgaste": d.desgaste || "",
-          "Corrosión": d.corrosion || "",
-          "Tipo": d.tipo || "",
-          "Cupla": d.cupla_status || d.cupla || ""
-        };
-
-        await enviarFilaSheetBest(fila);
-      }
-    }
-
-    // ===== Finalizar definitivamente (GUARDA + SHEETS + LIMPIA) =====
+    // ===== Finalizar definitivamente (SOLO FIREBASE) =====
     document.getElementById('btnCerrar').addEventListener('click', async () => {
       const ok = confirm('¿Finalizar definitivamente? Esto guardará la intervención en Firebase y la cerrará.');
       if (!ok) return;
@@ -335,7 +221,7 @@
       try {
         const itvGuardada = JSON.parse(localStorage.getItem('intervencionActual') || 'null');
         const tubosGuardados = JSON.parse(localStorage.getItem('tubos') || '[]');
-        if (!itvGuardada) throw new Error("No hay intervencionActual en localStorage");
+        if (!itvGuardada) throw new Error("No hay datos en el teléfono");
 
         const payload = {
           cliente: itvGuardada.cliente || "",
@@ -352,15 +238,12 @@
 
         const docId = generarIdAmigable();
 
-        // 1) Guardar en Firestore
-        const id = await guardarEnFirestore(payload, docId);
+        // 1) Guardar en Firestore (Colección "inspecciones")
+        await guardarEnFirestore(payload, docId);
 
-        // 2) Enviar a Sheets (SheetBest)
-        await enviarReporteASheets(id);
+        alert("✅ Inspección finalizada con éxito en Firebase. ID: " + docId);
 
-        alert("✅ Guardado en Firebase y enviado a Google Sheets. ID: " + id);
-
-        // 3) Limpiar localStorage
+        // 2) Limpiar localStorage
         localStorage.removeItem('intervencionActual');
         localStorage.removeItem('tubos');
         localStorage.removeItem('editMode');
@@ -371,7 +254,7 @@
       } catch (e) {
         console.error(e);
         btnCerrar.disabled = false;
-        alert("❌ No se pudo guardar/enviar. Mirá la consola (F12) para ver el error.");
+        alert("❌ Error: " + e.message);
       }
     });
   </script>

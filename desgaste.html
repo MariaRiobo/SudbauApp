@@ -87,11 +87,11 @@
     </div>
 
     <div class="botones-container">
-      <a href="Corrosion.html" class="btn-color amarillo">G2</a>
-      <a href="Corrosion.html" class="btn-color azul">G3</a>
-      <a href="Corrosion.html" class="btn-color verde">G4</a>
-      <a href="Corrosion.html" class="btn-color rojo">G5</a>
-      <a href="Corrosion.html" class="btn-color blanco">UNGRADE</a>
+      <a href="corrosion.html" class="btn-color amarillo">G2</a>
+      <a href="corrosion.html" class="btn-color azul">G3</a>
+      <a href="corrosion.html" class="btn-color verde">G4</a>
+      <a href="corrosion.html" class="btn-color rojo">G5</a>
+      <a href="corrosion.html" class="btn-color blanco">UNGRADE</a>
     </div>
 
     <div class="controles">
@@ -279,6 +279,7 @@
       }
     });
 
+    // CAMBIO AQUÍ: Botón volver con ruta absoluta para evitar 404
     btnVolver.addEventListener('click', (e) => {
       if (btnVolver.classList.contains('desactivado')) {
         e.preventDefault();
@@ -301,7 +302,8 @@
       saveIntervencion(itv);
       pushEvento('volverACupla', { tuboDestino: anterior });
 
-      window.location.href = 'cupla.html';
+      // Ruta absoluta y timestamp para cache
+      window.location.href = '/cupla.html?v=' + Date.now();
     });
 
     function forceUppercase(e) {
@@ -341,7 +343,6 @@
       updateJustificarState();
     });
 
-    // LOGICA PARA EL BOTÓN DE JUSTIFICAR (ACTUALIZADO)
     btnJustificar.addEventListener('click', async () => {
       const listaVal = listaJustificacion.value.trim().toUpperCase();
       let justificacionFinal = '';
@@ -370,7 +371,6 @@
         tubes[idx] = t;
         saveTubes(tubes);
 
-        // --- SUBIDA A FIREBASE ---
         if (itv.id) {
           try {
             const docRef = doc(db, "inspecciones_live", itv.id);
@@ -378,7 +378,7 @@
               paradaAt: t.draft.paradaAt,
               justificacion: guardado,
               arranqueAt: null,
-              tubos: tubes // <--- NO TOCAMOS NADA, SOLO AGREGAMOS ESTO
+              tubos: tubes
             });
           } catch (error) { console.error("Error al subir a Firebase:", error); }
         }
@@ -417,13 +417,12 @@
         tubes[idx] = t;
         saveTubes(tubes);
 
-        // --- SUBIDA A FIREBASE (ARRANQUE) ---
         if (itv_actual.id) {
           try {
             const docRef = doc(db, "inspecciones_live", itv_actual.id);
             await updateDoc(docRef, {
               arranqueAt: now.toISOString(),
-              tubos: tubes // <--- TAMBIEN ACTUALIZAMOS TUBOS AQUI
+              tubos: tubes
             });
           } catch (error) { console.error("Error al subir arranque:", error); }
         }
@@ -455,7 +454,8 @@
         syncTubeFromDraft();
         pushEvento('desgasteSeleccionado', { desgaste });
 
-        window.location.href = e.currentTarget.getAttribute('href');
+        // CAMBIO AQUÍ: Minúscula para evitar 404
+        window.location.href = 'corrosion.html';
       });
     });
   </script>

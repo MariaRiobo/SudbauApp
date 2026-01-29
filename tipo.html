@@ -25,233 +25,127 @@
   </script>
 
   <link rel="stylesheet" href="css/app.css" />
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+ </head>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
-
-</head>
-
-
-
-<body>
-
+ <body>
   <div class="container container-large container-wide">
 
-
-
+  
     <div class="header-corrosion">
-
-      <div class="header-left">
-
+       <div class="header-left">
         <img src="img/logo.png" alt="Logo de la empresa" class="logo">
-
-        <div class="titulo-y-tubo">
-
+         <div class="titulo-y-tubo">
           <p class="subtitulo-tubo">Tubo Nº <span id="numero-tubo"></span></p>
-
-          <h1 class="title">TIPO</h1>
-
+           <h1 class="title">TIPO</h1>
         </div>
+       </div>
+     </div>
 
-      </div>
-
+   
+     <div class="tipo-container">
+      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">CO</a><p>Corrosión</p></div>
+      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">DG</a><p>Desgaste general</p></div>
+      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">DC</a><p>Desgaste cuña/contra</p></div>
+      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">DP</a><p>Desgaste puntual</p></div>
+      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">TR</a><p>Tubing roto</p></div>
+      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">TT</a><p>Tubing torcido</p></div>
+      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">TP</a><p>Tubing pinchado</p></div>
+      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">RV</a><p>Rozamiento de varilla</p></div>
+      <div class="tipo-item tipo-span-2"><a href="cupla.html" class="tipo-btn">UG</a><p>Ungraded</p></div>
     </div>
-
-
-
-    <div class="tipo-container">
-
-      <div class="tipo-item"><a href="./cupla.html" class="tipo-btn">CO</a><p>Corrosión</p></div>
-
-      <div class="tipo-item"><a href="./cupla.html" class="tipo-btn">DG</a><p>Desgaste general</p></div>
-
-      <div class="tipo-item"><a href="./cupla.html" class="tipo-btn">DC</a><p>Desgaste cuña/contra</p></div>
-
-      <div class="tipo-item"><a href="./cupla.html" class="tipo-btn">DP</a><p>Desgaste puntual</p></div>
-
-      <div class="tipo-item"><a href="./cupla.html" class="tipo-btn">TR</a><p>Tubing roto</p></div>
-
-      <div class="tipo-item"><a href="./cupla.html" class="tipo-btn">TT</a><p>Tubing torcido</p></div>
-
-      <div class="tipo-item"><a href="./cupla.html" class="tipo-btn">TP</a><p>Tubing pinchado</p></div>
-
-      <div class="tipo-item"><a href="./cupla.html" class="tipo-btn">RV</a><p>Rozamiento de varilla</p></div>
-
-      <div class="tipo-item tipo-span-2"><a href="./cupla.html" class="tipo-btn">UG</a><p>Ungraded</p></div>
-
-    </div>
-
-
-
+ 
     <div class="controles">
-
-      <a href="corrosion.html" class="btn-volver">Atrás</a>
-
+      <button type="button" id="btnVolverAtras" class="btn-volver">Atrás</button>
     </div>
+   </div>
 
-  </div>
-
-
-
-  <script>
-
+   <script>
     /* ===== Local storage ===== */
-
-    function loadIntervencion() {
-
-      const raw = localStorage.getItem('intervencionActual');
-
-      if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
-
-      const itv = JSON.parse(raw);
-
-      if (!itv.draft) itv.draft = {};
-
-      if (!itv.eventos) itv.eventos = [];
-
+     function loadIntervencion() {
+       const raw = localStorage.getItem('intervencionActual');
+       if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
+       const itv = JSON.parse(raw);
+       if (!itv.draft) itv.draft = {};
+       if (!itv.eventos) itv.eventos = [];
       return itv;
-
-    }
+     }
 
     function saveIntervencion(itv) {
-
-      localStorage.setItem('intervencionActual', JSON.stringify(itv));
-
+       localStorage.setItem('intervencionActual', JSON.stringify(itv));
     }
-
-    function pushEvento(tipo, extra = {}) {
-
+     function pushEvento(tipo, extra = {}) {
       const itv = loadIntervencion(); if (!itv) return;
-
-      itv.eventos.push({
-
+       itv.eventos.push({
         tipo,
-
-        tubo: Number(itv.tuboActual),
-
+         tubo: Number(itv.tuboActual),
         at: new Date().toISOString(),
-
-        ...extra
-
+         ...extra
       });
-
-      saveIntervencion(itv);
-
+       saveIntervencion(itv);
     }
-
-
-
+ 
     /* ===== Helpers para tubos[] ===== */
-
-    function loadTubes(){ return JSON.parse(localStorage.getItem('tubos') || '[]'); }
-
-    function saveTubes(arr){ localStorage.setItem('tubos', JSON.stringify(arr)); }
-
-    function ensureTubeIndex(tubes, idx){
-
-      while (tubes.length <= idx) tubes.push({ nro: tubes.length + 1, draft: {}, completedAt: null });
-
-      return tubes[idx];
-
+     function loadTubes(){ return JSON.parse(localStorage.getItem('tubos') || '[]'); }
+     function saveTubes(arr){ localStorage.setItem('tubos', JSON.stringify(arr)); }
+     function ensureTubeIndex(tubes, idx){
+       while (tubes.length <= idx) tubes.push({ nro: tubes.length + 1, draft: {}, completedAt: null });
+       return tubes[idx];
     }
+     function currentTubeIndex(itv){ return Number(itv.tuboActual || 1) - 1; }
 
-    function currentTubeIndex(itv){ return Number(itv.tuboActual || 1) - 1; }
+     function syncDraftFromTube(){
+       const itv = loadIntervencion(); if (!itv) return;
+       const tubes = loadTubes();
+       const idx = currentTubeIndex(itv);
+       const t = ensureTubeIndex(tubes, idx);
+       itv.draft = { ...(t.draft||{}), ...(itv.draft||{}) };
+       saveIntervencion(itv);
+     }
+     function syncTubeFromDraft(){
+       const itv = loadIntervencion(); if (!itv) return;
+       const tubes = loadTubes();
+       const idx = currentTubeIndex(itv);
+       const t = ensureTubeIndex(tubes, idx);
+       t.draft = { ...(t.draft||{}), ...(itv.draft||{}) };
+       saveTubes(tubes);
+     }
 
-
-
-    function syncDraftFromTube(){
-
-      const itv = loadIntervencion(); if (!itv) return;
-
-      const tubes = loadTubes();
-
-      const idx = currentTubeIndex(itv);
-
-      const t = ensureTubeIndex(tubes, idx);
-
-      itv.draft = { ...(t.draft||{}), ...(itv.draft||{}) };
-
-      saveIntervencion(itv);
-
-    }
-
-    function syncTubeFromDraft(){
-
-      const itv = loadIntervencion(); if (!itv) return;
-
-      const tubes = loadTubes();
-
-      const idx = currentTubeIndex(itv);
-
-      const t = ensureTubeIndex(tubes, idx);
-
-      t.draft = { ...(t.draft||{}), ...(itv.draft||{}) };
-
-      saveTubes(tubes);
-
-    }
-
-
-
-    /* ===== Init ===== */
-
+     /* ===== Init ===== */
     const itv = loadIntervencion();
-
-    if (itv) {
-
-      syncDraftFromTube(); // 👈 precarga si estás editando
-
-      const numeroTuboSpan = document.getElementById('numero-tubo');
-
+     if (itv) {
+      syncDraftFromTube(); 
+       const numeroTuboSpan = document.getElementById('numero-tubo');
       if (numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
+     }
 
-    }
+    /* ===== LÓGICA DE NAVEGACIÓN CORREGIDA ===== */
 
-
-
-    /* ===== Guardar TIPO y navegar ===== */
-
-    document.querySelectorAll('.tipo-btn').forEach(a => {
-
-      a.addEventListener('click', (e) => {
-
-        e.preventDefault();
-
-
-
-        const code = e.currentTarget.textContent.trim(); // CO, DG, etc.
-
-        const itv2 = loadIntervencion(); if (!itv2) return;
-
-
-
-        itv2.draft.tipo = code;
-
-        saveIntervencion(itv2);
-
-
-
-        // NUEVO: persistir por tubo
-
-        syncTubeFromDraft();
-
-
-
-        pushEvento('tipoSeleccionado', { tipo: code });
-
-
-
-        window.location.href = e.currentTarget.getAttribute('href'); // cupla.html
-
-      });
-
+    // 1. Manejo del botón Atrás (Corrosión)
+    document.getElementById('btnVolverAtras').addEventListener('click', () => {
+      // Forzamos minúsculas y saltamos caché
+      window.location.href = 'corrosion.html?v=' + Date.now();
     });
 
+    // 2. Guardar TIPO y navegar a Cupla
+    document.querySelectorAll('.tipo-btn').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        const code = e.currentTarget.textContent.trim();
+        const itv2 = loadIntervencion(); if (!itv2) return;
+
+        itv2.draft.tipo = code;
+        saveIntervencion(itv2);
+        syncTubeFromDraft();
+        pushEvento('tipoSeleccionado', { tipo: code });
+
+        // Navegamos a cupla forzando actualización
+        window.location.href = 'cupla.html?v=' + Date.now();
+      });
+    });
   </script>
-
 </body>
-
 </html>

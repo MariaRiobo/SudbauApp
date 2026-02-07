@@ -112,8 +112,7 @@
     }
 
     /* =========================================================
-       ✅ CAMBIO: Guardar corrosión como G2/G3/G4/G5/UNGRADE
-       (la UI sigue usando colores para el estilo)
+       Guardar corrosión como G2/G3/G4/G5/UNGRADE
     ========================================================= */
     const GRADO_MAP = {
       amarillo: 'G2',
@@ -137,32 +136,31 @@
         const itv2 = loadIntervencion(); 
         if (!itv2) return;
 
-        // ✅ Guardamos SOLO el código técnico de corrosión
+        // Guardamos el código técnico de corrosión
         itv2.draft.corrosion = corrosion;
 
-        // ✅ Leemos el código técnico de desgaste (ya cambiado en Desgaste.html)
+        // Leemos el código técnico de desgaste
         const desgaste = itv2.draft.desgaste;
 
         // ============================================================
-        // LÓGICA DE SALTO AUTOMÁTICO (G2 + G2 = tipo CO)
+        // LÓGICA DE SALTO AUTOMÁTICO (G2 + G2 = SIN TIPO)
         // ============================================================
         if (desgaste === 'G2' && corrosion === 'G2') {
 
-          // A) Asignamos automáticamente el tipo "CO"
-          itv2.draft.tipo = 'CO';
+          // ASIGNAMOS UNA RAYITA PORQUE NO LLEVA CLASIFICACIÓN
+          itv2.draft.tipo = '-';
 
-          // B) Guardamos
           saveIntervencion(itv2);
           syncTubeFromDraft();
 
           pushEvento('corrosionSeleccionada', { corrosion });
-          pushEvento('tipoAutoSeleccionado', { tipo: 'CO', motivo: 'G2+G2' });
+          pushEvento('tipoAutoSeleccionado', { tipo: '-', motivo: 'G2+G2' });
 
-          // C) Saltamos directo a Cupla.html
+          // SALTAMOS DIRECTO A CUPLA
           window.location.href = 'cupla.html';
 
         } else {
-
+          // Si no es G2+G2, pasamos normalmente a la pantalla de TIPO
           saveIntervencion(itv2);
           syncTubeFromDraft();
 

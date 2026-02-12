@@ -1,15 +1,9 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
   <meta charset="UTF-8" />
-
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
   <title>Tipo de Tubo</title>
 
   <meta name="theme-color" content="#0055AA">
@@ -25,15 +19,66 @@
   </script>
 
   <link rel="stylesheet" href="css/app.css" />
-   <link rel="preconnect" href="https://fonts.googleapis.com">
-   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
- </head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
 
- <body>
+  <style>
+    /* ===== ESTILOS IDÉNTICOS A CUPLA ===== */
+    .tipo-btn {
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+      transition: all 0.2s ease;
+      font-family: 'Kanit', sans-serif;
+      font-weight: 500;
+    }
+
+    .tipo-btn.selected { 
+      outline: 3px solid rgba(0,85,170,.25); 
+      transform: translateY(1px); 
+      background-color: #0055AA !important; 
+      color: white !important; 
+      border-color: #0055AA !important;
+    }
+    
+    /* Nota: No usamos .desactivado aquí para permitir selección múltiple */
+
+    .seleccion-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 10px 14px; border-radius: 10px; margin: 10px 0 8px;
+      background: #E9F3FF; font-family: 'Noto Sans', sans-serif; font-size: 14px;
+      color: #05145A;
+    }
+    .seleccion-banner[hidden]{ display:none; }
+    .seleccion-banner button {
+      background: transparent; border: 0; text-decoration: underline; cursor: pointer;
+      font-family: 'Kanit', sans-serif; font-size: 14px; color: #0055AA;
+    }
+
+    .btn:disabled, .btn[disabled] {
+      opacity: 0.5;
+      filter: grayscale(100%);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .controles {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .btn-volver { flex: 1; text-align: center; }
+    .btn-siguiente { flex: 1; }
+  </style>
+</head>
+
+<body>
   <div class="container container-large container-wide">
 
-  
     <div class="header-corrosion">
        <div class="header-left">
         <img src="img/logo.png" alt="Logo de la empresa" class="logo">
@@ -44,26 +89,31 @@
        </div>
      </div>
 
-   
      <div class="tipo-container">
-      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">CO</a><p>Corrosión</p></div>
-      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">DG</a><p>Desgaste general</p></div>
-      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">DC</a><p>Desgaste cuña/contra</p></div>
-      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">DP</a><p>Desgaste puntual</p></div>
-      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">TR</a><p>Tubing roto</p></div>
-      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">TT</a><p>Tubing torcido</p></div>
-      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">TP</a><p>Tubing pinchado</p></div>
-      <div class="tipo-item"><a href="cupla.html" class="tipo-btn">RV</a><p>Rozamiento de varilla</p></div>
-      <div class="tipo-item tipo-span-2"><a href="cupla.html" class="tipo-btn">UG</a><p>Ungraded</p></div>
+      <div class="tipo-item"><div class="tipo-btn" data-code="CO">CO</div><p>Corrosión</p></div>
+      <div class="tipo-item"><div class="tipo-btn" data-code="DG">DG</div><p>Desgaste general</p></div>
+      <div class="tipo-item"><div class="tipo-btn" data-code="DC">DC</div><p>Desgaste cuña/contra</p></div>
+      <div class="tipo-item"><div class="tipo-btn" data-code="DP">DP</div><p>Desgaste puntual</p></div>
+      <div class="tipo-item"><div class="tipo-btn" data-code="TR">TR</div><p>Tubing roto</p></div>
+      <div class="tipo-item"><div class="tipo-btn" data-code="TT">TT</div><p>Tubing torcido</p></div>
+      <div class="tipo-item"><div class="tipo-btn" data-code="TP">TP</div><p>Tubing pinchado</p></div>
+      <div class="tipo-item"><div class="tipo-btn" data-code="RV">RV</div><p>Rozamiento de varilla</p></div>
+      <div class="tipo-item tipo-span-2"><div class="tipo-btn" data-code="UG">UG</div><p>Ungraded</p></div>
     </div>
  
+    <div id="seleccion-banner" class="seleccion-banner" hidden aria-live="polite">
+      <span id="seleccion-texto"></span>
+      <button id="seleccion-cambiar" type="button">Limpiar</button>
+    </div>
+
     <div class="controles">
       <button type="button" id="btnVolverAtras" class="btn-volver">Atrás</button>
+      <button type="button" id="btnSiguiente" class="btn btn-siguiente" disabled>Siguiente</button>
     </div>
    </div>
 
    <script>
-    /* ===== Local storage ===== */
+    /* ===== Local Storage Helpers ===== */
      function loadIntervencion() {
        const raw = localStorage.getItem('intervencionActual');
        if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
@@ -72,22 +122,20 @@
        if (!itv.eventos) itv.eventos = [];
       return itv;
      }
-
-    function saveIntervencion(itv) {
-       localStorage.setItem('intervencionActual', JSON.stringify(itv));
-    }
-     function pushEvento(tipo, extra = {}) {
+    function saveIntervencion(itv) { localStorage.setItem('intervencionActual', JSON.stringify(itv)); }
+    
+    function pushEvento(tipo, extra = {}) {
       const itv = loadIntervencion(); if (!itv) return;
        itv.eventos.push({
         tipo,
-         tubo: Number(itv.tuboActual),
+        tubo: Number(itv.tuboActual),
         at: new Date().toISOString(),
          ...extra
       });
        saveIntervencion(itv);
     }
  
-    /* ===== Helpers para tubos[] ===== */
+    /* ===== Helpers Tubos ===== */
      function loadTubes(){ return JSON.parse(localStorage.getItem('tubos') || '[]'); }
      function saveTubes(arr){ localStorage.setItem('tubos', JSON.stringify(arr)); }
      function ensureTubeIndex(tubes, idx){
@@ -121,31 +169,86 @@
       if (numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
      }
 
-    /* ===== LÓGICA DE NAVEGACIÓN CORREGIDA ===== */
+    /* ===== LÓGICA DE SELECCIÓN (ESTILO CUPLA) ===== */
+    
+    let seleccionados = [];
 
-    // 1. Manejo del botón Atrás (Corrosión)
+    // Cargar previos
+    if (itv && itv.draft && itv.draft.tipo && itv.draft.tipo !== 'UNGRADE') {
+      seleccionados = itv.draft.tipo.split(' + ').map(s => s.trim()).filter(Boolean);
+    }
+
+    const botones = document.querySelectorAll('.tipo-btn');
+    const banner = document.getElementById('seleccion-banner');
+    const bannerTexto = document.getElementById('seleccion-texto');
+    const bannerCambiar = document.getElementById('seleccion-cambiar');
+    const btnSiguiente = document.getElementById('btnSiguiente');
+
+    function actualizarVista() {
+      // 1. Pintar botones
+      botones.forEach(btn => {
+        const codigo = btn.getAttribute('data-code');
+        if (seleccionados.includes(codigo)) {
+          btn.classList.add('selected');
+        } else {
+          btn.classList.remove('selected');
+        }
+      });
+
+      // 2. Manejar Banner y Botón Siguiente
+      if (seleccionados.length > 0) {
+        banner.hidden = false;
+        bannerTexto.textContent = `Selección: ${seleccionados.join(' + ')}`;
+        btnSiguiente.disabled = false;
+      } else {
+        banner.hidden = true;
+        btnSiguiente.disabled = true;
+      }
+    }
+
+    // Inicializar
+    actualizarVista();
+
+    // Eventos Click en Botones
+    botones.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const codigo = btn.getAttribute('data-code');
+
+        if (seleccionados.includes(codigo)) {
+          seleccionados = seleccionados.filter(item => item !== codigo);
+        } else {
+          seleccionados.push(codigo);
+        }
+        actualizarVista();
+      });
+    });
+
+    // Evento "Limpiar" del Banner
+    bannerCambiar.addEventListener('click', () => {
+      seleccionados = [];
+      actualizarVista();
+    });
+
+    // Navegación Atrás
     document.getElementById('btnVolverAtras').addEventListener('click', () => {
-      // Forzamos minúsculas y saltamos caché
       window.location.href = 'corrosion.html?v=' + Date.now();
     });
 
-    // 2. Guardar TIPO y navegar a Cupla
-    document.querySelectorAll('.tipo-btn').forEach(a => {
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
+    // Navegación Siguiente (Guardar)
+    btnSiguiente.addEventListener('click', () => {
+       const itv2 = loadIntervencion(); if (!itv2) return;
 
-        const code = e.currentTarget.textContent.trim();
-        const itv2 = loadIntervencion(); if (!itv2) return;
+       const tipoString = seleccionados.join(' + ');
 
-        itv2.draft.tipo = code;
-        saveIntervencion(itv2);
-        syncTubeFromDraft();
-        pushEvento('tipoSeleccionado', { tipo: code });
+       itv2.draft.tipo = tipoString;
+       saveIntervencion(itv2);
+       syncTubeFromDraft();
+       pushEvento('tipoSeleccionado', { tipo: tipoString });
 
-        // Navegamos a cupla forzando actualización
-        window.location.href = 'cupla.html?v=' + Date.now();
-      });
+       window.location.href = 'cupla.html?v=' + Date.now();
     });
+
   </script>
 </body>
 </html>

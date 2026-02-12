@@ -124,15 +124,47 @@
     }
 
     const itv = loadIntervencion();
-    const tubos = loadTubes();
+    let tubos = loadTubes(); // Usamos let para poder modificarlo si hace falta
+
+    /* =========================================================
+       ✅ AUTOCORRECCIÓN: Forzar completado del último tubo
+       Si llegaste acá, se asume que terminaste lo anterior.
+    ========================================================= */
+    if (tubos.length > 0) {
+      let huboCambios = false;
+      
+      // Revisamos todos los tubos. Si tienen datos en 'draft' pero no 'completedAt', los cerramos.
+      tubos.forEach(t => {
+        // Criterio: Si no tiene fecha de fin, le ponemos la actual.
+        if (!t.completedAt) {
+          t.completedAt = new Date().toISOString();
+          
+          // Si por casualidad quedó data suelta en la intervención global para este tubo, la unimos
+          if (itv && itv.draft && (itv.tuboActual - 1) === (t.nro - 1)) {
+             t.draft = { ...t.draft, ...itv.draft };
+          }
+          
+          huboCambios = true;
+        }
+      });
+
+      if (huboCambios) {
+        saveTubes(tubos);
+        console.log("Se autocompletaron tubos pendientes.");
+      }
+    }
 
     // ===== Resumen =====
     const resumen = document.getElementById('resumen');
     if (itv && resumen) {
+      let clienteHTML = itv.cliente ? `<b>${itv.cliente}</b><br>` : '';
+      let areaHTML = itv.area ? `Área: ${itv.area}<br>` : '';
+      let pozoHTML = itv.pozo ? `Pozo: ${itv.pozo}<br>` : '';
+      
       resumen.innerHTML = `
-        <b>${itv.cliente || ''}</b><br>
-        Área: ${itv.area || ''}<br>
-        Pozo: ${itv.pozo || ''}<br>
+        ${clienteHTML}
+        ${areaHTML}
+        ${pozoHTML}
         OT: ${itv.ot || ''}<br>
         Operador: ${itv.operador || ''}<br>
         Ayudante: ${itv.ayudante || ''}<br>
@@ -148,7 +180,8 @@
 
     tubos.forEach((t, i) => {
       const opt = document.createElement('option');
-      const estado = t.completedAt ? 'OK' : 'INCOMPLETO';
+      // Ahora todos deberían tener completedAt gracias a la autocorrección
+      const estado = t.completedAt ? 'OK' : 'INCOMPLETO'; 
       opt.value = String(i);
       opt.textContent = `Tubo ${t.nro} — ${estado}`;
       sel.appendChild(opt);
@@ -171,14 +204,16 @@
 
       const itv2 = loadIntervencion();
       itv2.tuboActual = idx + 1;
+      // Recuperamos el draft del tubo para editarlo
       itv2.draft = (t && t.draft) ? { ...t.draft } : {};
       saveIntervencion(itv2);
 
+      // Redirigimos al inicio del flujo de edición (Desgaste)
       window.location.href = 'desgaste.html';
     });
 
     /* =========================================================
-      ✅ Firestore
+       ✅ Firestore
     ========================================================= */
     async function guardarEnFirestore(payload, docIdAmigable) {
       const { doc, setDoc, collection, serverTimestamp } = await import(
@@ -217,6 +252,7 @@
 
       const btnCerrar = document.getElementById('btnCerrar');
       btnCerrar.disabled = true;
+      btnCerrar.textContent = "Guardando...";
 
       try {
         const itvGuardada = JSON.parse(localStorage.getItem('intervencionActual') || 'null');
@@ -254,6 +290,7 @@
       } catch (e) {
         console.error(e);
         btnCerrar.disabled = false;
+        btnCerrar.textContent = "Finalizar definitivamente";
         alert("❌ Error: " + e.message);
       }
     });

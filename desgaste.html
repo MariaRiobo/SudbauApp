@@ -103,14 +103,7 @@
       <p>Fecha y hora: <span id="fecha-hora"></span></p>
 
       <label for="justificacion_lista">Justificación:</label>
-
-      <input
-        type="text"
-        id="justificacion_lista"
-        list="justificaciones_opciones"
-        placeholder="Seleccionar o escribir motivo..."
-        autocomplete="off"
-      >
+      <input type="text" id="justificacion_lista" list="justificaciones_opciones" placeholder="Seleccionar o escribir motivo..." autocomplete="off">
 
       <datalist id="justificaciones_opciones">
         <option value="ESPERA POR MANIOBRAS">
@@ -218,18 +211,26 @@
       const t = ensureTubeIndex(tubes, idx);
       return { itv, tubes, idx, t };
     }
+    
+    // Esta función es vital: pasa lo que está en 'intervencionActual.draft' al array de 'tubos'
     function syncDraftFromTube() {
       const pack = getCurrentTube(); if (!pack) return;
       const { itv, t } = pack;
       itv.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
       saveIntervencion(itv);
     }
+    
+    // Esta función guarda en 'tubos' lo que está en memoria
     function syncTubeFromDraft() {
       const pack = getCurrentTube(); if (!pack) return;
       const { tubes, idx, t, itv } = pack;
+      
+      // Mezclamos el draft existente con el nuevo
       t.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
+      
       tubes[idx] = t;
       saveTubes(tubes);
+      console.log('Tubo guardado en localStorage:', t);
     }
 
     /* ===== Inicialización ===== */
@@ -254,19 +255,14 @@
     btnParada.addEventListener('click', () => {
       const now = new Date();
       fechaHoraSpan.textContent = now.toLocaleString();
-
       justificacionContainer.style.display = 'block';
-
       botonesColor.forEach(btn => btn.classList.add('desactivado'));
       btnVolver.classList.add('desactivado');
       btnVolver.setAttribute('aria-disabled', 'true');
-
       btnParada.disabled = true;
       btnJustificar.disabled = true;
-      
       btnJustificar.textContent = "Justificar";
       btnJustificar.classList.remove('success');
-
       pushEvento('parada');
 
       const pack = getCurrentTube();
@@ -289,7 +285,6 @@
 
       const actual = Number(itv.tuboActual || 1);
       const anterior = actual - 1;
-
       if (anterior < 1) {
         alert('Ya estás en el primer tubo. No se puede retroceder más.');
         return;
@@ -300,7 +295,6 @@
       itv.tuboActual = anterior;
       saveIntervencion(itv);
       pushEvento('volverACupla', { tuboDestino: anterior });
-
       window.location.href = '/cupla.html?v=' + Date.now();
     });
 
@@ -317,9 +311,7 @@
 
     function updateJustificarState() {
       if (btnJustificar.classList.contains('success')) return;
-
       const listaVal = listaJustificacion.value.trim().toUpperCase();
-
       if (listaVal === 'OTROS') {
         txtJustificacionOtros.style.display = 'block';
         const otrosVal = txtJustificacionOtros.value.trim().toUpperCase();
@@ -341,7 +333,6 @@
       updateJustificarState();
     });
 
-    // --- SECCIÓN ACTUALIZADA: LÓGICA DE FINALIZACIÓN ---
     btnJustificar.addEventListener('click', async () => {
       const listaVal = listaJustificacion.value.trim().toUpperCase();
       let justificacionFinal = '';
@@ -354,12 +345,10 @@
       if (!justificacionFinal) return;
 
       const guardado = `STANDBY - ${justificacionFinal}`;
-
       btnArranque.style.display = 'block';
       btnJustificar.disabled = true;
       btnJustificar.textContent = "JUSTIFICADO ✅";
       btnJustificar.classList.add('success');
-
       pushEvento('justificacion', { texto: guardado });
 
       const pack = getCurrentTube();
@@ -383,7 +372,6 @@
         }
       }
 
-      // Redirección si es finalización
       if (justificacionFinal.includes("FINALIZA INSPECCIÓN")) {
         const confirmarFin = confirm("Seleccionaste un motivo de finalización. ¿Querés ir a la pantalla de cierre ahora?");
         if (confirmarFin) {
@@ -391,7 +379,6 @@
           return; 
         }
       }
-
       alert("✅ Justificación guardada. Ahora puede presionar el botón de ARRANQUE.");
     });
 
@@ -402,11 +389,9 @@
       botonesColor.forEach(btn => btn.classList.remove('desactivado'));
       btnVolver.classList.remove('desactivado');
       btnVolver.removeAttribute('aria-disabled');
-
       justificacionContainer.style.display = 'none';
       btnArranque.style.display = 'none';
       btnParada.disabled = false;
-
       listaJustificacion.value = '';
       txtJustificacionOtros.value = '';
       txtJustificacionOtros.style.display = 'none';
@@ -437,32 +422,75 @@
       }
     });
 
+    // Mapeo normal solo para los colores que NO son blanco
     const DESGASTE_MAP = {
       amarillo: 'G2',
       azul: 'G3',
       verde: 'G4',
-      rojo: 'G5',
-      blanco: 'UNGRADE'
+      rojo: 'G5'
+      // Blanco lo manejamos aparte para asegurar el Ungrade completo
     };
 
+    /* ===== LÓGICA DE SELECCIÓN DE BOTONES ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
       a.addEventListener('click', (e) => {
         if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
         e.preventDefault();
 
-        const cls = e.currentTarget.className.split(/\s+/);
-        const color = Object.keys(DESGASTE_MAP).find(c => cls.includes(c));
-        const desgaste = DESGASTE_MAP[color] || 'UNGRADE';
-
+        const btn = e.currentTarget;
         const itv2 = loadIntervencion();
-        if (!itv2) return;
+        if (!itv2) {
+          console.error("No se pudo cargar la intervención");
+          return;
+        }
 
-        itv2.draft.desgaste = desgaste;
-        saveIntervencion(itv2);
-        syncTubeFromDraft();
-        pushEvento('desgasteSeleccionado', { desgaste });
+        // --- CASO 1: UNGRADE (Blanco) ---
+        if (btn.classList.contains('blanco')) {
+          console.log("Seleccionado UNGRADE. Guardando datos...");
+          
+          // 1. Asignamos los 3 valores obligatorios como UNGRADE
+          itv2.draft.desgaste = 'UNGRADE';
+          itv2.draft.corrosion = 'UNGRADE';
+          itv2.draft.tipo = 'UNGRADE';
+          
+          // 2. Guardamos en intervención actual
+          saveIntervencion(itv2);
+          
+          // 3. IMPORTANTÍSIMO: Sincronizar con el array de tubos antes de irse
+          syncTubeFromDraft();
+          
+          // 4. Evento
+          pushEvento('desgasteSeleccionado', { desgaste: 'UNGRADE', auto: true });
+          
+          // 5. Redirección
+          window.location.href = 'cupla.html';
+          return; // Salimos para que no ejecute el resto
+        }
 
-        window.location.href = 'corrosion.html';
+        // --- CASO 2: Resto de colores (G2, G3, G4, G5) ---
+        const cls = btn.className.split(/\s+/);
+        const color = Object.keys(DESGASTE_MAP).find(c => cls.includes(c));
+        const desgaste = DESGASTE_MAP[color];
+
+        if (desgaste) {
+          itv2.draft.desgaste = desgaste;
+
+          // Si es G2, asignamos tipo CO por defecto (según lógica anterior)
+          if (desgaste === 'G2') {
+            itv2.draft.tipo = 'CO';
+          } else {
+            // Limpiamos tipo y corrosión por si había datos viejos
+            delete itv2.draft.tipo;
+            delete itv2.draft.corrosion;
+          }
+
+          saveIntervencion(itv2);
+          syncTubeFromDraft(); // Guardamos en el array de tubos
+          pushEvento('desgasteSeleccionado', { desgaste });
+
+          // Vamos a corrosión
+          window.location.href = 'corrosion.html';
+        }
       });
     });
   </script>

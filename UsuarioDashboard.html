@@ -127,7 +127,6 @@
       100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
     }
 
-    /* ESTILOS DEL CARTEL DE PARADA */
     .aviso-parada-card {
       background: #FFF4F4;
       border: 1px solid #FFCCCC;
@@ -198,7 +197,7 @@
     <button class="logout-btn" id="btnLogout">Cerrar Sesión</button>
   </div>
 
-  <div id="loading">Buscando registros en tiempo real...</div>
+  <div id="loading">Conectando en tiempo real...</div>
   <div id="no-data">No se encontraron inspecciones para este cliente.</div>
 
   <div class="container" id="inspectionsContainer"></div>
@@ -206,7 +205,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
@@ -238,7 +237,7 @@
       "carmoenergy@sudbauapp.com": "CARMO ENERGY",
       "bravaenergia@sudbauapp.com": "BRAVA ENERGIA",
       "mandacaruenergy@sudbauapp.com": "MANDACARU ENERGY",
-      "petrobras@sudbauapp.com": "PETROBRAS",
+      "petrobras@sudbrasapp.com": "PETROBRAS",
       "petroreconcavo@sudbauapp.com": "PETRORECONCAVO",
     };
 
@@ -247,11 +246,8 @@
     const noData = document.getElementById("no-data");
     const userEmailDisplay = document.getElementById("userEmailDisplay");
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "usuario.html"; 
-        return;
-      }
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { window.location.href = "usuario.html"; return; }
       const email = user.email.toLowerCase();
       userEmailDisplay.textContent = email;
       const clientName = CLIENT_MAP[email];
@@ -261,62 +257,51 @@
         alert("Usuario no configurado.");
         return;
       }
-      await cargarInspecciones(clientName);
+      // Llamamos a la nueva función de escucha en tiempo real
+      iniciarEscuchaReal(clientName);
     });
 
-    async function cargarInspecciones(clientName) {
-      try {
-        container.innerHTML = "";
-        loading.style.display = "block";
-        noData.style.display = "none";
-        
-        const qLive = query(
-          collection(db, "inspecciones_live"), 
-          where("cliente", "==", clientName)
-        );
-        
-        const qFinal = query(
-          collection(db, "inspecciones"), 
-          where("cliente", "==", clientName),
-          orderBy("createdAt", "desc") 
-        );
+    function iniciarEscuchaReal(clientName) {
+      loading.style.display = "block";
+      noData.style.display = "none";
 
-        const [snapLive, snapFinal] = await Promise.all([
-          getDocs(qLive),
-          getDocs(qFinal)
-        ]);
-        
+      const qLive = query(collection(db, "inspecciones_live"), where("cliente", "==", clientName));
+      const qFinal = query(collection(db, "inspecciones"), where("cliente", "==", clientName), orderBy("createdAt", "desc"));
+
+      let listLive = [];
+      let listFinal = [];
+
+      const actualizarPantalla = () => {
+        container.innerHTML = "";
         loading.style.display = "none";
 
-        const idsFinalizados = new Set();
-        let listaLive = [];
-        let listaFinal = [];
-        
-        snapFinal.forEach(doc => {
-          idsFinalizados.add(doc.id);
-          listaFinal.push({ data: doc.data(), id: doc.id });
-        });
+        const idsFinalizados = new Set(listFinal.map(i => i.id));
 
-        snapLive.forEach(doc => {
-          const data = doc.data();
-          const yaTermino = idsFinalizados.has(doc.id) || data.estado === "FINALIZADA";
-          if (!yaTermino) {
-            listaLive.push({ data: data, id: doc.id });
+        // Unimos y filtramos: solo mostramos Live si no está en la colección de Finalizados
+        listLive.forEach(item => {
+          if (!idsFinalizados.has(item.id) && item.data.estado !== "FINALIZADA") {
+            renderCard(item.data, item.id, true);
           }
         });
 
-        if (listaLive.length === 0 && listaFinal.length === 0) {
-          noData.style.display = "block";
-          return;
-        }
+        listFinal.forEach(item => {
+          renderCard(item.data, item.id, false);
+        });
 
-        listaLive.forEach(item => renderCard(item.data, item.id, true));
-        listaFinal.forEach(item => renderCard(item.data, item.id, false));
+        if (listLive.length === 0 && listFinal.length === 0) noData.style.display = "block";
+      };
 
-      } catch (error) {
-        console.error("Error:", error);
-        loading.textContent = "Error al conectar. Intente nuevamente.";
-      }
+      // SUSCRIPCIÓN 1: Live
+      onSnapshot(qLive, (snapshot) => {
+        listLive = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        actualizarPantalla();
+      }, (error) => console.error("Error Live:", error));
+
+      // SUSCRIPCIÓN 2: Finalizadas
+      onSnapshot(qFinal, (snapshot) => {
+        listFinal = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        actualizarPantalla();
+      }, (error) => console.error("Error Final:", error));
     }
 
     function renderCard(data, id, isLive) {
@@ -327,9 +312,7 @@
         fechaStr = d.toLocaleDateString("es-AR", { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
 
-      const totalTubos = data.tuboActual || data.tubosCount || 0;
-
-      // --- NUEVA LÓGICA DE DETECCIÓN DE PARADA DESDE EL ARRAY DE TUBOS ---
+      const totalTubos = data.tuboActual || 0;
       let htmlParada = '';
       let estadoTxt = isLive ? 'OPERANDO' : 'Completado';
 
@@ -337,7 +320,6 @@
           const idx = (data.tuboActual || 1) - 1;
           const tuboActualData = data.tubos[idx];
 
-          // Si el tubo tiene parada pero no tiene arranque, mostramos el cartel
           if (tuboActualData && tuboActualData.draft && tuboActualData.draft.paradaAt && !tuboActualData.draft.arranqueAt) {
               estadoTxt = 'DETENIDO';
               const horaParada = new Date(tuboActualData.draft.paradaAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

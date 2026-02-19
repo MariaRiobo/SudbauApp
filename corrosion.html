@@ -48,7 +48,25 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, enableIndexedDbPersistence, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // PERSISTENCIA OFFLINE
+    enableIndexedDbPersistence(db).catch(() => console.warn("Modo offline activo en Corrosión"));
+
     /* ===== Local storage ===== */
     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
@@ -111,9 +129,6 @@
       if (numeroTubo) numeroTubo.textContent = itv.tuboActual;
     }
 
-    /* =========================================================
-       Guardar corrosión como G2/G3/G4/G5/UNGRADE
-    ========================================================= */
     const GRADO_MAP = {
       amarillo: 'G2',
       azul: 'G3',
@@ -124,7 +139,7 @@
 
     /* ===== Selección → guarda draft y lógica de salto ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
-      a.addEventListener('click', (e) => {
+      a.addEventListener('click', async (e) => {
         if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
 
         e.preventDefault();
@@ -136,34 +151,29 @@
         const itv2 = loadIntervencion(); 
         if (!itv2) return;
 
-        // Guardamos el código técnico de corrosión
         itv2.draft.corrosion = corrosion;
-
-        // Leemos el código técnico de desgaste
         const desgaste = itv2.draft.desgaste;
 
-        // ============================================================
-        // LÓGICA DE SALTO AUTOMÁTICO (G2 + G2 = SIN TIPO)
-        // ============================================================
+        // SINCRONIZACIÓN FIREBASE (OFFLINE)
+        const idFirebase = itv2.id || itv2.customId;
+        if (idFirebase) {
+          const docRef = doc(db, "inspecciones_live", idFirebase);
+          setDoc(docRef, { 
+            ultimo_draft: itv2.draft,
+            lastUpdateAt: serverTimestamp() 
+          }, { merge: true }).catch(() => {});
+        }
+
         if (desgaste === 'G2' && corrosion === 'G2') {
-
-          // ASIGNAMOS UNA RAYITA PORQUE NO LLEVA CLASIFICACIÓN
           itv2.draft.tipo = '-';
-
           saveIntervencion(itv2);
           syncTubeFromDraft();
-
           pushEvento('corrosionSeleccionada', { corrosion });
           pushEvento('tipoAutoSeleccionado', { tipo: '-', motivo: 'G2+G2' });
-
-          // SALTAMOS DIRECTO A CUPLA
           window.location.href = 'cupla.html';
-
         } else {
-          // Si no es G2+G2, pasamos normalmente a la pantalla de TIPO
           saveIntervencion(itv2);
           syncTubeFromDraft();
-
           pushEvento('corrosionSeleccionada', { corrosion });
           window.location.href = 'tipo.html';
         }

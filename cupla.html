@@ -52,9 +52,8 @@
   </style>
 
   <script type="module">
-    // Cambiamos a la versión 10.7.1 que es más estable para evitar el 404 del SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, serverTimestamp, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
@@ -68,6 +67,11 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
+    // ACTIVAR PERSISTENCIA OFFLINE
+    enableIndexedDbPersistence(db).catch((err) => {
+        console.warn("Modo offline limitado: ", err.code);
+    });
 
     window.SUDBAU_DB = db;
     window.FB_DOC = doc;
@@ -114,7 +118,6 @@
   </div>
 
   <script>
-    /* ===== Helpers de estado ===== */
     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
       if (!raw) { window.location.href = 'InicioSesion.html'; return null; }
@@ -132,7 +135,6 @@
 
     function loadTubes(){ return JSON.parse(localStorage.getItem('tubos') || '[]'); }
     function saveTubes(arr){ localStorage.setItem('tubos', JSON.stringify(arr)); }
-    
     function currentTubeIndex(itv){ return Number(itv.tuboActual || 1) - 1; }
 
     function syncTubeFromDraft(){
@@ -144,49 +146,40 @@
       saveTubes(tubes);
     }
 
-    /* ✅ LÓGICA DE SUBIDA EN TIEMPO REAL */
-    async function guardarTuboEnVivo(itv, dataTubo, esFinal = false) {
-      try {
-        const db = window.SUDBAU_DB;
-        const docFn = window.FB_DOC;
-        const setFn = window.FB_SET;
-        const tsFn = window.FB_TS;
+    // MODIFICADO: Versión optimizada para Offline
+    function guardarTuboEnVivo(itv, dataTubo, esFinal = false) {
+      const db = window.SUDBAU_DB;
+      const docFn = window.FB_DOC;
+      const setFn = window.FB_SET;
+      const tsFn = window.FB_TS;
 
-        if (!db || !docFn) return;
+      if (!db || !docFn) return;
 
-        if (!itv.liveId) {
-          const d = new Date();
-          itv.liveId = `LIVE-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
-          saveIntervencion(itv);
-        }
+      // Usamos el customId generado en InicioSesion (imprescindible para offline)
+      const inspectionId = itv.customId || itv.liveId;
 
-        const headerRef = docFn(db, "inspecciones_live", itv.liveId);
-        await setFn(headerRef, {
-          cliente: (itv.cliente || "").toString().toUpperCase().trim(),
-          pozo: itv.pozo || "",
-          area: itv.area || "",
-          ot: itv.ot || "",
-          operador: itv.operador || "",
-          tuboActual: Number(itv.tuboActual),
-          lastUpdateAt: tsFn(),
-          estado: esFinal ? "FINALIZADA" : "EN_PROCESO"
-        }, { merge: true });
+      // 1. Cabecera (Merge para asegurar creación)
+      const headerRef = docFn(db, "inspecciones_live", inspectionId);
+      setFn(headerRef, {
+        cliente: itv.cliente,
+        pozo: itv.pozo,
+        ot: itv.ot,
+        tuboActual: Number(itv.tuboActual),
+        lastUpdateAt: tsFn(),
+        estado: esFinal ? "FINALIZADA" : "EN_PROCESO"
+      }, { merge: true }).catch(e => console.log("Header en cola offline"));
 
-        const tuboRef = docFn(db, "inspecciones_live", itv.liveId, "tubos", String(itv.tuboActual));
-        await setFn(tuboRef, {
-          tuboNro: Number(itv.tuboActual),
-          desgaste: dataTubo.desgaste || "",
-          corrosion: dataTubo.corrosion || "",
-          tipo: dataTubo.tipo || "",
-          cupla_status: dataTubo.cupla_status || "",
-          completedAt: new Date().toISOString(),
-          updatedAt: tsFn()
-        }, { merge: true });
-
-        console.log("✅ Sincronizado");
-      } catch (err) {
-        console.error("❌ Error Firebase:", err);
-      }
+      // 2. Registro del tubo individual
+      const tuboRef = docFn(db, "inspecciones_live", inspectionId, "tubos", String(itv.tuboActual));
+      return setFn(tuboRef, {
+        tuboNro: Number(itv.tuboActual),
+        desgaste: dataTubo.desgaste || "",
+        corrosion: dataTubo.corrosion || "",
+        tipo: dataTubo.tipo || "",
+        cupla_status: dataTubo.cupla_status || "",
+        completedAt: new Date().toISOString(),
+        updatedAt: tsFn()
+      }, { merge: true });
     }
 
     /* ===== UI Eventos ===== */
@@ -208,12 +201,10 @@
         e.preventDefault();
         seleccionActual = btn.dataset.code;
         tipoBtns.forEach(b => (b === btn) ? b.classList.add('selected') : b.classList.add('desactivado'));
-
         btnSiguiente.disabled = false;
         btnFinalizar.disabled = false;
         bannerTexto.textContent = `Seleccionaste: ${seleccionActual.toUpperCase()}`;
         banner.hidden = false;
-
         setDraft('cupla_status', seleccionActual);
         syncTubeFromDraft();
       });
@@ -229,7 +220,8 @@
       syncTubeFromDraft();
     });
 
-    btnSiguiente.addEventListener('click', async () => {
+    // MODIFICADO: Guardado instantáneo sin esperar a la red
+    btnSiguiente.addEventListener('click', () => {
       if (!seleccionActual) return;
       
       const itv = loadIntervencion();
@@ -237,38 +229,28 @@
       const idx = currentTubeIndex(itv);
       const dataTubo = { ...itv.draft, cupla_status: seleccionActual };
 
-      btnSiguiente.disabled = true;
-      btnSiguiente.textContent = "Sincronizando...";
-      
-      // Intentamos subir (si falla por el 404, no importa, seguimos igual)
-      try {
-        await guardarTuboEnVivo(itv, dataTubo);
-      } catch(e) { console.error("Error al sincronizar pero continuo..."); }
+      // 1. Firebase en Background (Sin await)
+      guardarTuboEnVivo(itv, dataTubo).catch(e => console.log("Sincronización en cola..."));
 
+      // 2. Guardado Local
       if (tubes[idx]) tubes[idx].completedAt = new Date().toISOString();
       saveTubes(tubes);
 
+      // 3. Navegación inmediata
       itv.tuboActual = Number(itv.tuboActual) + 1;
       itv.draft = {}; 
       saveIntervencion(itv);
-
-      // CORREGIDO: Ruta minúscula
       window.location.href = 'desgaste.html';
     });
 
-    btnFinalizar.addEventListener('click', async () => {
+    btnFinalizar.addEventListener('click', () => {
       if (!seleccionActual) return;
       const itv = loadIntervencion();
       const dataTubo = { ...itv.draft, cupla_status: seleccionActual };
       
-      btnFinalizar.disabled = true;
-      btnFinalizar.textContent = "Finalizando...";
+      // Firebase en Background
+      guardarTuboEnVivo(itv, dataTubo, true).catch(e => {});
       
-      try {
-        await guardarTuboEnVivo(itv, dataTubo, true);
-      } catch(e) {}
-      
-      // CORREGIDO: Ruta minúscula
       window.location.href = 'findelproceso.html';
     });
   </script>

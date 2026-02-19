@@ -150,8 +150,8 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, enableIndexedDbPersistence, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
@@ -164,6 +164,11 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
+    // ACTIVAR PERSISTENCIA OFFLINE
+    enableIndexedDbPersistence(db).catch((err) => {
+        console.warn("Modo offline activado");
+    });
 
     /* ===== Local Storage Helpers ===== */
     function loadIntervencion() {
@@ -212,7 +217,6 @@
       return { itv, tubes, idx, t };
     }
     
-    // Esta función es vital: pasa lo que está en 'intervencionActual.draft' al array de 'tubos'
     function syncDraftFromTube() {
       const pack = getCurrentTube(); if (!pack) return;
       const { itv, t } = pack;
@@ -220,14 +224,10 @@
       saveIntervencion(itv);
     }
     
-    // Esta función guarda en 'tubos' lo que está en memoria
     function syncTubeFromDraft() {
       const pack = getCurrentTube(); if (!pack) return;
       const { tubes, idx, t, itv } = pack;
-      
-      // Mezclamos el draft existente con el nuevo
       t.draft = { ...(t.draft || {}), ...(itv.draft || {}) };
-      
       tubes[idx] = t;
       saveTubes(tubes);
       console.log('Tubo guardado en localStorage:', t);
@@ -295,7 +295,7 @@
       itv.tuboActual = anterior;
       saveIntervencion(itv);
       pushEvento('volverACupla', { tuboDestino: anterior });
-      window.location.href = '/cupla.html?v=' + Date.now();
+      window.location.href = 'cupla.html?v=' + Date.now();
     });
 
     function forceUppercase(e) {
@@ -359,15 +359,17 @@
         tubes[idx] = t;
         saveTubes(tubes);
 
-        if (itv.id) {
+        const idFirebase = itv.id || itv.customId;
+        if (idFirebase) {
           try {
-            const docRef = doc(db, "inspecciones_live", itv.id);
-            await updateDoc(docRef, {
+            const docRef = doc(db, "inspecciones_live", idFirebase);
+            await setDoc(docRef, {
               paradaAt: t.draft.paradaAt,
               justificacion: guardado,
               arranqueAt: null,
-              tubos: tubes
-            });
+              tubos: tubes,
+              lastUpdateAt: serverTimestamp()
+            }, { merge: true });
           } catch (error) { console.error("Error al subir a Firebase:", error); }
         }
       }
@@ -410,25 +412,25 @@
         tubes[idx] = t;
         saveTubes(tubes);
 
-        if (itv_actual.id) {
+        const idFirebase = itv_actual.id || itv_actual.customId;
+        if (idFirebase) {
           try {
-            const docRef = doc(db, "inspecciones_live", itv_actual.id);
-            await updateDoc(docRef, {
+            const docRef = doc(db, "inspecciones_live", idFirebase);
+            await setDoc(docRef, {
               arranqueAt: now.toISOString(),
-              tubos: tubes
-            });
+              tubos: tubes,
+              lastUpdateAt: serverTimestamp()
+            }, { merge: true });
           } catch (error) { console.error("Error al subir arranque:", error); }
         }
       }
     });
 
-    // Mapeo normal solo para los colores que NO son blanco
     const DESGASTE_MAP = {
       amarillo: 'G2',
       azul: 'G3',
       verde: 'G4',
       rojo: 'G5'
-      // Blanco lo manejamos aparte para asegurar el Ungrade completo
     };
 
     /* ===== LÓGICA DE SELECCIÓN DE BOTONES ===== */
@@ -439,56 +441,34 @@
 
         const btn = e.currentTarget;
         const itv2 = loadIntervencion();
-        if (!itv2) {
-          console.error("No se pudo cargar la intervención");
-          return;
-        }
+        if (!itv2) return;
 
-        // --- CASO 1: UNGRADE (Blanco) ---
         if (btn.classList.contains('blanco')) {
-          console.log("Seleccionado UNGRADE. Guardando datos...");
-          
-          // 1. Asignamos los 3 valores obligatorios como UNGRADE
           itv2.draft.desgaste = 'UNGRADE';
           itv2.draft.corrosion = 'UNGRADE';
           itv2.draft.tipo = 'UNGRADE';
-          
-          // 2. Guardamos en intervención actual
           saveIntervencion(itv2);
-          
-          // 3. IMPORTANTÍSIMO: Sincronizar con el array de tubos antes de irse
           syncTubeFromDraft();
-          
-          // 4. Evento
           pushEvento('desgasteSeleccionado', { desgaste: 'UNGRADE', auto: true });
-          
-          // 5. Redirección
           window.location.href = 'cupla.html';
-          return; // Salimos para que no ejecute el resto
+          return;
         }
 
-        // --- CASO 2: Resto de colores (G2, G3, G4, G5) ---
         const cls = btn.className.split(/\s+/);
         const color = Object.keys(DESGASTE_MAP).find(c => cls.includes(c));
         const desgaste = DESGASTE_MAP[color];
 
         if (desgaste) {
           itv2.draft.desgaste = desgaste;
-
-          // Si es G2, asignamos tipo CO por defecto (según lógica anterior)
           if (desgaste === 'G2') {
             itv2.draft.tipo = 'CO';
           } else {
-            // Limpiamos tipo y corrosión por si había datos viejos
             delete itv2.draft.tipo;
             delete itv2.draft.corrosion;
           }
-
           saveIntervencion(itv2);
-          syncTubeFromDraft(); // Guardamos en el array de tubos
+          syncTubeFromDraft(); 
           pushEvento('desgasteSeleccionado', { desgaste });
-
-          // Vamos a corrosión
           window.location.href = 'corrosion.html';
         }
       });

@@ -27,20 +27,17 @@
     .hint{ color:#05145A; font-size:13px; }
     .header-login .logo{ max-height:48px; }
     
-    /* Para que los nuevos inputs con lista se vean bien */
     .form-group input[list] {
       width: 100%;
       box-sizing: border-box;
-      padding-right: 30px !important; /* Espacio para la flecha */
+      padding-right: 30px !important;
     }
 
-    /* Contenedor para la flechita en iPhone */
     .input-list-wrapper {
       position: relative;
       width: 100%;
     }
 
-    /* Icono de flecha (triangulito azul) */
     .input-list-wrapper::after {
       content: '\25BC'; 
       position: absolute;
@@ -53,7 +50,6 @@
       opacity: 0.6;
     }
 
-    /* NUEVO: Estilo para resaltar error sin borrar datos */
     .form-group.field-error input {
       border: 2px solid #ef4444 !important;
       background-color: #fef2f2 !important;
@@ -121,29 +117,10 @@
       <div class="form-group">
         <label for="cliente">Cliente</label>
         <div class="input-list-wrapper">
-          <input type="text" id="cliente" name="cliente"
-                 list="cliente-list"
-                 placeholder="Seleccionar o escribir cliente..."
-                 required autocomplete="off" />
+          <input type="text" id="cliente" name="cliente" list="cliente-list" placeholder="Seleccionar o escribir cliente..." required autocomplete="off" />
         </div>
         <datalist id="cliente-list">
-          <option value="PAESA">
-          <option value="PAESA MENDOZA">
-          <option value="PCR">
-          <option value="OILSTONE">
-          <option value="SHELL">
-          <option value="VISTA&OIL">
-          <option value="PETROLEOS SUDAMERICANOS">
-          <option value="YPF">
-          <option value="MADALENA ENERGY">
-          <option value="PECOM">
-          <option value="CGC">
-          <option value="CAPSA">
-          <option value="CARMO ENERGY">
-          <option value="BRAVA ENERGIA">
-          <option value="MANDACARU ENERGY">
-          <option value="PETROBRAS">
-          <option value="PETRORE CONCAVO">
+          <option value="PAESA"><option value="PAESA MENDOZA"><option value="PCR"><option value="OILSTONE"><option value="SHELL"><option value="VISTA&OIL"><option value="PETROLEOS SUDAMERICANOS"><option value="YPF"><option value="MADALENA ENERGY"><option value="PECOM"><option value="CGC"><option value="CAPSA"><option value="CARMO ENERGY"><option value="BRAVA ENERGIA"><option value="MANDACARU ENERGY"><option value="PETROBRAS"><option value="PETRORE CONCAVO">
         </datalist>
       </div>
 
@@ -155,12 +132,11 @@
       <div class="form-group">
         <label for="pozo_letras">Pozo</label>
         <div class="pozo-wrap">
-          <input id="pozo_letras" name="pozo_letras" placeholder="ABCD" pattern="[A-Za-z]{2,4}" minlength="2" maxlength="4" autocomplete="off" inputmode="latin" aria-describedby="pozoHelp" required />
+          <input id="pozo_letras" name="pozo_letras" placeholder="ABCD" pattern="[A-Za-z]{2,4}" minlength="2" maxlength="4" autocomplete="off" inputmode="latin" required />
           <span aria-hidden="true">-</span>
           <input id="pozo_num" name="pozo_num" placeholder="0000" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" inputmode="numeric" required />
         </div>
-        <small id="pozoHelp" class="hint">Letras: 2 a 4. Números: exactamente 4 dígitos</small>
-        <input type="hidden" id="pozo" name="pozo" />
+        <small class="hint">Letras: 2 a 4. Números: exactamente 4 dígitos</small>
       </div>
 
       <div class="form-group">
@@ -171,38 +147,20 @@
       <div class="form-group">
         <label for="operador">Operador</label>
         <div class="input-list-wrapper">
-          <input type="text" id="operador" name="operador"
-                 list="operador-list"
-                 placeholder="Seleccionar o escribir operador..."
-                 required autocomplete="off" />
+          <input type="text" id="operador" name="operador" list="operador-list" placeholder="Seleccionar o escribir operador..." required autocomplete="off" />
         </div>
         <datalist id="operador-list">
-          <option value="SAPURI CRISTIAN">
-          <option value="MARINO LEANDRO">
-          <option value="LUZON WALTER">
-          <option value="CABEZA GASTÓN">
-          <option value="VASQUEZ OSVALDO">
-          <option value="SAPURI ARTURO">
-          <option value="JAILSON">
-
+          <option value="SAPURI CRISTIAN"><option value="MARINO LEANDRO"><option value="LUZON WALTER"><option value="CABEZA GASTÓN"><option value="VASQUEZ OSVALDO"><option value="SAPURI ARTURO"><option value="JAILSON">
         </datalist>
       </div>
 
       <div class="form-group">
         <label for="ayudante">Ayudante</label>
         <div class="input-list-wrapper">
-          <input type="text" id="ayudante" name="ayudante"
-                 list="ayudante-list"
-                 placeholder="Seleccionar o escribir ayudante..."
-                 required autocomplete="off" />
+          <input type="text" id="ayudante" name="ayudante" list="ayudante-list" placeholder="Seleccionar o escribir ayudante..." required autocomplete="off" />
         </div>
         <datalist id="ayudante-list">
-          <option value="GONZALES DENIS">
-          <option value="SOSA DARIO">
-          <option value="GIMENEZ CLAUDIO">
-          <option value="ROURET RAUL">
-          <option value="MANOEL">
-
+          <option value="GONZALES DENIS"><option value="SOSA DARIO"><option value="GIMENEZ CLAUDIO"><option value="ROURET RAUL"><option value="MANOEL">
         </datalist>
       </div>
 
@@ -218,7 +176,29 @@
     </form>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // REEMPLAZA ESTO CON TUS CREDENCIALES REALES SI SON DISTINTAS
+    const firebaseConfig = {
+      apiKey: "tu-api-key",
+      authDomain: "tu-app.firebaseapp.com",
+      projectId: "tu-project-id",
+      storageBucket: "tu-app.appspot.com",
+      messagingSenderId: "tu-id",
+      appId: "tu-app-id"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ACTIVAR PERSISTENCIA OFFLINE
+    enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code == 'failed-precondition') console.warn("Múltiples pestañas.");
+        else if (err.code == 'unimplemented') console.warn("Navegador no soporta offline.");
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
       const fechaInput = document.getElementById('fecha');
       const today = new Date().toISOString().split('T')[0];
@@ -242,11 +222,9 @@
         }
       };
 
-      areaInput.addEventListener('input', forceUppercase);
-      solicitadoInput.addEventListener('input', forceUppercase);
-      clienteInput.addEventListener('input', forceUppercase);
-      operadorInput.addEventListener('input', forceUppercase);
-      ayudanteInput.addEventListener('input', forceUppercase);
+      [areaInput, solicitadoInput, clienteInput, operadorInput, ayudanteInput].forEach(inp => {
+        inp.addEventListener('input', forceUppercase);
+      });
 
       otInput.addEventListener('input', (e) => {
         e.target.value = e.target.value.replace(/[^0-9]/g, '');
@@ -256,44 +234,38 @@
       const pozoN = document.getElementById('pozo_num');
 
       pozoL.addEventListener('input', (e) => {
-        let val = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-        e.target.value = val;
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
       });
 
       pozoN.addEventListener('input', (e) => {
-        let val = (e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4);
-        e.target.value = val;
+        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
       });
     });
 
-    document.getElementById('inicioForm').addEventListener('submit', function(e) {
-      // 1. Siempre detenemos el envío automático para que no se borre nada
+    document.getElementById('inicioForm').addEventListener('submit', async function(e) {
       e.preventDefault();
 
-      // 2. Quitamos marcas de error previas
       const allGroups = this.querySelectorAll('.form-group');
       allGroups.forEach(g => g.classList.remove('field-error'));
 
-      // 3. Validamos si el formulario está completo
       if (!this.checkValidity()){
-        alert("⚠️ Por favor, complete todos los campos obligatorios antes de continuar.");
-        
-        // Marcamos los campos vacíos en rojo sin resetear el formulario
+        alert("⚠️ Por favor, complete todos los campos obligatorios.");
         const inputs = this.querySelectorAll('input[required]');
         inputs.forEach(input => {
-          if(!input.checkValidity()){
-            input.closest('.form-group').classList.add('field-error');
-          }
+          if(!input.checkValidity()) input.closest('.form-group').classList.add('field-error');
         });
         return;
       }
  
-      // 4. Capturamos los datos
       const letras = (document.getElementById('pozo_letras').value || '').toUpperCase();
       const nums   = (document.getElementById('pozo_num').value || '');
       const pozoValue = `${letras}-${nums}`;
 
+      // GENERAMOS EL ID ÚNICO AQUÍ PARA QUE SEA LA BASE DE TODO EL PROCESO
+      const customId = `OT-${this.ot.value}-${pozoValue}-${Date.now()}`.replace(/\s+/g, '_');
+
       const intervencion = {
+        customId: customId, // Importante para las siguientes pantallas
         fecha: this.fecha.value,
         cliente: this.cliente.value,
         area: this.area.value,
@@ -305,19 +277,27 @@
         tuboActual: 1
       };
 
-      // 5. RESUMEN DE CONFIRMACIÓN (Vuelve a estar activo)
       const resumen = `📋 REVISIÓN DE DATOS:\n\n` +
                       `• Cliente: ${intervencion.cliente}\n` +
                       `• Pozo: ${intervencion.pozo}\n` +
-                      `• OT: ${intervencion.ot}\n` +
-                      `• Operador: ${intervencion.operador}\n` +
-                      `• Ayudante: ${intervencion.ayudante}\n\n` +
-                      `¿Confirmar inicio de inspección? Los datos no se podrán cambiar.`;
+                      `• OT: ${intervencion.ot}\n\n` +
+                      `¿Confirmar inicio?`;
 
       if (confirm(resumen)) {
+        // 1. Guardar Local
         localStorage.setItem('intervencionActual', JSON.stringify(intervencion)); 
         localStorage.setItem('tubos', JSON.stringify([]));
-         window.location.href = 'desgaste.html';
+
+        // 2. CREAR BASE EN FIREBASE (Modo "Fire and Forget" para Offline)
+        // No usamos await aquí para que si no hay WiFi, el usuario pase de página igual
+        setDoc(doc(db, "inspecciones", customId), {
+            ...intervencion,
+            createdAt: new Date().toISOString(),
+            status: 'in_progress'
+        }, { merge: true }).catch(err => console.log("Guardado en cola offline"));
+
+        // 3. Saltar a la carga
+        window.location.href = 'desgaste.html';
       } 
     });
   </script>

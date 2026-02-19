@@ -44,8 +44,6 @@
       border-color: #0055AA !important;
     }
     
-    /* Nota: No usamos .desactivado aquí para permitir selección múltiple */
-
     .seleccion-banner {
       display: flex; align-items: center; justify-content: space-between;
       gap: 12px; padding: 10px 14px; border-radius: 10px; margin: 10px 0 8px;
@@ -112,7 +110,25 @@
     </div>
    </div>
 
-   <script>
+   <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, enableIndexedDbPersistence, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMeOkD8NMaPwVRGqeQxqnrpnwPfjwjiuw",
+      authDomain: "sudbau-app.firebaseapp.com",
+      projectId: "sudbau-app",
+      storageBucket: "sudbau-app.firebasestorage.app",
+      messagingSenderId: "803219965094",
+      appId: "1:803219965094:web:121e2ed15d663225202067"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // PERSISTENCIA OFFLINE
+    enableIndexedDbPersistence(db).catch(() => console.warn("Modo offline activo en Tipo"));
+
     /* ===== Local Storage Helpers ===== */
      function loadIntervencion() {
        const raw = localStorage.getItem('intervencionActual');
@@ -170,11 +186,10 @@
      }
 
     /* ===== LÓGICA DE SELECCIÓN (ESTILO CUPLA) ===== */
-    
     let seleccionados = [];
 
     // Cargar previos
-    if (itv && itv.draft && itv.draft.tipo && itv.draft.tipo !== 'UNGRADE') {
+    if (itv && itv.draft && itv.draft.tipo && itv.draft.tipo !== 'UNGRADE' && itv.draft.tipo !== '-') {
       seleccionados = itv.draft.tipo.split(' + ').map(s => s.trim()).filter(Boolean);
     }
 
@@ -185,7 +200,6 @@
     const btnSiguiente = document.getElementById('btnSiguiente');
 
     function actualizarVista() {
-      // 1. Pintar botones
       botones.forEach(btn => {
         const codigo = btn.getAttribute('data-code');
         if (seleccionados.includes(codigo)) {
@@ -195,7 +209,6 @@
         }
       });
 
-      // 2. Manejar Banner y Botón Siguiente
       if (seleccionados.length > 0) {
         banner.hidden = false;
         bannerTexto.textContent = `Selección: ${seleccionados.join(' + ')}`;
@@ -206,10 +219,8 @@
       }
     }
 
-    // Inicializar
     actualizarVista();
 
-    // Eventos Click en Botones
     botones.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -224,31 +235,37 @@
       });
     });
 
-    // Evento "Limpiar" del Banner
     bannerCambiar.addEventListener('click', () => {
       seleccionados = [];
       actualizarVista();
     });
 
-    // Navegación Atrás
     document.getElementById('btnVolverAtras').addEventListener('click', () => {
       window.location.href = 'corrosion.html?v=' + Date.now();
     });
 
-    // Navegación Siguiente (Guardar)
-    btnSiguiente.addEventListener('click', () => {
+    btnSiguiente.addEventListener('click', async () => {
        const itv2 = loadIntervencion(); if (!itv2) return;
 
        const tipoString = seleccionados.join(' + ');
-
        itv2.draft.tipo = tipoString;
+       
        saveIntervencion(itv2);
        syncTubeFromDraft();
        pushEvento('tipoSeleccionado', { tipo: tipoString });
 
+       // SINCRONIZACIÓN FIREBASE
+       const idFirebase = itv2.id || itv2.customId;
+       if (idFirebase) {
+         const docRef = doc(db, "inspecciones_live", idFirebase);
+         setDoc(docRef, { 
+           ultimo_draft: itv2.draft,
+           lastUpdateAt: serverTimestamp() 
+         }, { merge: true }).catch(() => {});
+       }
+
        window.location.href = 'cupla.html?v=' + Date.now();
     });
-
   </script>
 </body>
 </html>

@@ -257,7 +257,6 @@
         alert("Usuario no configurado.");
         return;
       }
-      // Llamamos a la nueva función de escucha en tiempo real
       iniciarEscuchaReal(clientName);
     });
 
@@ -277,7 +276,6 @@
 
         const idsFinalizados = new Set(listFinal.map(i => i.id));
 
-        // Unimos y filtramos: solo mostramos Live si no está en la colección de Finalizados
         listLive.forEach(item => {
           if (!idsFinalizados.has(item.id) && item.data.estado !== "FINALIZADA") {
             renderCard(item.data, item.id, true);
@@ -291,13 +289,11 @@
         if (listLive.length === 0 && listFinal.length === 0) noData.style.display = "block";
       };
 
-      // SUSCRIPCIÓN 1: Live
       onSnapshot(qLive, (snapshot) => {
         listLive = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         actualizarPantalla();
       }, (error) => console.error("Error Live:", error));
 
-      // SUSCRIPCIÓN 2: Finalizadas
       onSnapshot(qFinal, (snapshot) => {
         listFinal = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         actualizarPantalla();
@@ -312,7 +308,9 @@
         fechaStr = d.toLocaleDateString("es-AR", { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
 
-      const totalTubos = data.tuboActual || 0;
+      // ✅ CAMBIO APLICADO: Busca en todas las propiedades posibles para no mostrar 0
+      const totalTubos = data.tuboActual || data.tubosCount || (data.tubos ? data.tubos.length : 0) || 0;
+      
       let htmlParada = '';
       let estadoTxt = isLive ? 'OPERANDO' : 'Completado';
 

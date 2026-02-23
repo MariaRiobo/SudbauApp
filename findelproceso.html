@@ -102,11 +102,6 @@
   </div>
 
   <script>
-    /* =========================================================
-      ❌ SHEETBEST DESACTIVADO (PRUEBA FINALIZADA)
-    ========================================================= */
-    const SHEETBEST_URL = ""; 
-
     /* ===== LocalStorage helpers ===== */
     function loadIntervencion() {
       const raw = localStorage.getItem('intervencionActual');
@@ -124,33 +119,26 @@
     }
 
     const itv = loadIntervencion();
-    let tubos = loadTubes(); // Usamos let para poder modificarlo si hace falta
+    let tubos = loadTubes(); 
 
     /* =========================================================
        ✅ AUTOCORRECCIÓN: Forzar completado del último tubo
-       Si llegaste acá, se asume que terminaste lo anterior.
     ========================================================= */
     if (tubos.length > 0) {
       let huboCambios = false;
       
-      // Revisamos todos los tubos. Si tienen datos en 'draft' pero no 'completedAt', los cerramos.
       tubos.forEach(t => {
-        // Criterio: Si no tiene fecha de fin, le ponemos la actual.
         if (!t.completedAt) {
           t.completedAt = new Date().toISOString();
-          
-          // Si por casualidad quedó data suelta en la intervención global para este tubo, la unimos
           if (itv && itv.draft && (itv.tuboActual - 1) === (t.nro - 1)) {
              t.draft = { ...t.draft, ...itv.draft };
           }
-          
           huboCambios = true;
         }
       });
 
       if (huboCambios) {
         saveTubes(tubos);
-        console.log("Se autocompletaron tubos pendientes.");
       }
     }
 
@@ -179,9 +167,8 @@
     const btnEditar = document.getElementById('btnEditar');
 
     tubos.forEach((t, i) => {
-      const opt = document.createElement('option');
-      // Ahora todos deberían tener completedAt gracias a la autocorrección
       const estado = t.completedAt ? 'OK' : 'INCOMPLETO'; 
+      opt = document.createElement('option');
       opt.value = String(i);
       opt.textContent = `Tubo ${t.nro} — ${estado}`;
       sel.appendChild(opt);
@@ -204,11 +191,9 @@
 
       const itv2 = loadIntervencion();
       itv2.tuboActual = idx + 1;
-      // Recuperamos el draft del tubo para editarlo
       itv2.draft = (t && t.draft) ? { ...t.draft } : {};
       saveIntervencion(itv2);
 
-      // Redirigimos al inicio del flujo de edición (Desgaste)
       window.location.href = 'desgaste.html';
     });
 
@@ -228,7 +213,7 @@
       await setDoc(ref, {
         ...payload,
         createdAt: serverTimestamp(),
-        estado: "FINALIZADA" // Marcamos como finalizada
+        estado: "FINALIZADA" 
       });
 
       return ref.id;
@@ -245,7 +230,7 @@
       return `SUD-${y}${m}${day}-${hh}${mm}${ss}`;
     }
 
-    // ===== Finalizar definitivamente (SOLO FIREBASE) =====
+    // ===== Finalizar definitivamente =====
     document.getElementById('btnCerrar').addEventListener('click', async () => {
       const ok = confirm('¿Finalizar definitivamente? Esto guardará la intervención en Firebase y la cerrará.');
       if (!ok) return;
@@ -274,12 +259,21 @@
 
         const docId = generarIdAmigable();
 
-        // 1) Guardar en Firestore (Colección "inspecciones")
+        // 1) Guardar inspección final
         await guardarEnFirestore(payload, docId);
 
-        alert("✅ Inspección finalizada con éxito en Firebase. ID: " + docId);
+        // 2) ELIMINAR EL BORRADOR "EN VIVO"
+        const idLive = itvGuardada.customId || itvGuardada.liveId || itvGuardada.id;
+        if (idLive) {
+          const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js");
+          const db = window.SUDBAU_DB;
+          // Lo disparamos sin "await" para que no frene la pantalla si hay micro-cortes
+          deleteDoc(doc(db, "inspecciones_live", idLive)).catch(err => console.warn("No se pudo borrar el live:", err));
+        }
 
-        // 2) Limpiar localStorage
+        alert("✅ Inspección finalizada con éxito en Firebase.");
+
+        // 3) Limpiar localStorage
         localStorage.removeItem('intervencionActual');
         localStorage.removeItem('tubos');
         localStorage.removeItem('editMode');

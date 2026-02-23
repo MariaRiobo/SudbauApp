@@ -178,19 +178,65 @@
      }
 
      /* ===== Init ===== */
-    const itv = loadIntervencion();
-     if (itv) {
+     const itvInit = loadIntervencion();
+     if (itvInit) {
       syncDraftFromTube(); 
        const numeroTuboSpan = document.getElementById('numero-tubo');
-      if (numeroTuboSpan) numeroTuboSpan.textContent = itv.tuboActual;
+      if (numeroTuboSpan) numeroTuboSpan.textContent = itvInit.tuboActual;
      }
+
+    // ==========================================
+    // SINCRONIZADOR SILENCIOSO DE FONDO
+    // ==========================================
+    function sincronizarLiveDeFondo() {
+      const itv = loadIntervencion();
+      const tubos = loadTubes();
+      if (!itv) return;
+
+      const idFirebase = itv.customId || itv.liveId;
+      if (!idFirebase) return;
+
+      // 1. Guardar la cabecera (incluyendo el borrador actual)
+      const headerRef = doc(db, "inspecciones_live", idFirebase);
+      setDoc(headerRef, {
+        cliente: itv.cliente || "",
+        pozo: itv.pozo || "",
+        ot: itv.ot || "",
+        tuboActual: Number(itv.tuboActual),
+        ultimo_draft: itv.draft || {},
+        lastUpdateAt: serverTimestamp(),
+        estado: "EN_PROCESO"
+      }, { merge: true }).catch(() => {});
+
+      // 2. Revisamos los ÚLTIMOS 10 TUBOS y los subimos por si faltó alguno.
+      tubos.forEach(t => {
+        const d = t.draft || t;
+        const nroTubo = String(t.nro || d.tuboNro);
+        if (!nroTubo || nroTubo === "undefined") return;
+
+        const tuboRef = doc(db, "inspecciones_live", idFirebase, "tubos", nroTubo);
+        setDoc(tuboRef, {
+          tuboNro: Number(nroTubo),
+          desgaste: d.desgaste || "",
+          corrosion: d.corrosion || "",
+          tipo: d.tipo || "",
+          cupla_status: d.cupla_status || d.cupla || "",
+          updatedAt: serverTimestamp()
+        }, { merge: true }).catch(() => {});
+      });
+    }
+
+    // Disparamos la sincronización apenas abre la página
+    sincronizarLiveDeFondo();
+    window.addEventListener('online', sincronizarLiveDeFondo);
+
 
     /* ===== LÓGICA DE SELECCIÓN (ESTILO CUPLA) ===== */
     let seleccionados = [];
 
     // Cargar previos
-    if (itv && itv.draft && itv.draft.tipo && itv.draft.tipo !== 'UNGRADE' && itv.draft.tipo !== '-') {
-      seleccionados = itv.draft.tipo.split(' + ').map(s => s.trim()).filter(Boolean);
+    if (itvInit && itvInit.draft && itvInit.draft.tipo && itvInit.draft.tipo !== 'UNGRADE' && itvInit.draft.tipo !== '-') {
+      seleccionados = itvInit.draft.tipo.split(' + ').map(s => s.trim()).filter(Boolean);
     }
 
     const botones = document.querySelectorAll('.tipo-btn');
@@ -244,7 +290,10 @@
       window.location.href = 'corrosion.html?v=' + Date.now();
     });
 
-    btnSiguiente.addEventListener('click', async () => {
+    // ==========================================
+    // BOTÓN SIGUIENTE: SOLO GUARDA LOCAL Y SALTA. ¡NO TOCA FIREBASE!
+    // ==========================================
+    btnSiguiente.addEventListener('click', () => {
        const itv2 = loadIntervencion(); if (!itv2) return;
 
        const tipoString = seleccionados.join(' + ');
@@ -254,15 +303,8 @@
        syncTubeFromDraft();
        pushEvento('tipoSeleccionado', { tipo: tipoString });
 
-       // SINCRONIZACIÓN FIREBASE
-       const idFirebase = itv2.id || itv2.customId;
-       if (idFirebase) {
-         const docRef = doc(db, "inspecciones_live", idFirebase);
-         setDoc(docRef, { 
-           ultimo_draft: itv2.draft,
-           lastUpdateAt: serverTimestamp() 
-         }, { merge: true }).catch(() => {});
-       }
+       // ACÁ SACAMOS EL SETDOC PARA QUE NO HAYA PROBLEMAS DE RED NI BLOQUEOS.
+       // LA PRÓXIMA PANTALLA SE ENCARGARÁ DE SUBIR ESTE DRAFT A FIREBASE.
 
        window.location.href = 'cupla.html?v=' + Date.now();
     });

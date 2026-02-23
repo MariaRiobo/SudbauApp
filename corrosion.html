@@ -102,7 +102,7 @@
       return tubes[idx];
     }
     function currentTubeIndex(itv) {
-      return Number(itv.tuboActual || 1) - 1; // tubo 1 => index 0
+      return Number(itv.tuboActual || 1) - 1; 
     }
     function syncDraftFromTube() {
       const itv = loadIntervencion(); if (!itv) return;
@@ -122,12 +122,57 @@
     }
 
     // Mostrar número de tubo + precargar draft del tubo
-    const itv = loadIntervencion();
-    if (itv) {
+    const itvInit = loadIntervencion();
+    if (itvInit) {
       syncDraftFromTube();
       const numeroTubo = document.getElementById('numero-tubo');
-      if (numeroTubo) numeroTubo.textContent = itv.tuboActual;
+      if (numeroTubo) numeroTubo.textContent = itvInit.tuboActual;
     }
+
+    // ==========================================
+    // SINCRONIZADOR SILENCIOSO DE FONDO
+    // ==========================================
+    function sincronizarLiveDeFondo() {
+      const itv = loadIntervencion();
+      const tubos = loadTubes();
+      if (!itv) return;
+
+      const idFirebase = itv.customId || itv.liveId;
+      if (!idFirebase) return;
+
+      // 1. Guardar la cabecera (incluyendo el borrador actual)
+      const headerRef = doc(db, "inspecciones_live", idFirebase);
+      setDoc(headerRef, {
+        cliente: itv.cliente || "",
+        pozo: itv.pozo || "",
+        ot: itv.ot || "",
+        tuboActual: Number(itv.tuboActual),
+        ultimo_draft: itv.draft || {},
+        lastUpdateAt: serverTimestamp(),
+        estado: "EN_PROCESO"
+      }, { merge: true }).catch(() => {});
+
+      // 2. Revisamos los ÚLTIMOS 10 TUBOS y los subimos por si faltó alguno.
+      tubos.forEach(t => {
+        const d = t.draft || t;
+        const nroTubo = String(t.nro || d.tuboNro);
+        if (!nroTubo || nroTubo === "undefined") return;
+
+        const tuboRef = doc(db, "inspecciones_live", idFirebase, "tubos", nroTubo);
+        setDoc(tuboRef, {
+          tuboNro: Number(nroTubo),
+          desgaste: d.desgaste || "",
+          corrosion: d.corrosion || "",
+          tipo: d.tipo || "",
+          cupla_status: d.cupla_status || d.cupla || "",
+          updatedAt: serverTimestamp()
+        }, { merge: true }).catch(() => {});
+      });
+    }
+
+    // Disparamos la sincronización apenas abre la página
+    sincronizarLiveDeFondo();
+    window.addEventListener('online', sincronizarLiveDeFondo);
 
     const GRADO_MAP = {
       amarillo: 'G2',
@@ -137,11 +182,10 @@
       blanco: 'UNGRADE'
     };
 
-    /* ===== Selección → guarda draft y lógica de salto ===== */
+    /* ===== Selección → guarda draft y lógica de salto (SIN FIREBASE) ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
-      a.addEventListener('click', async (e) => {
+      a.addEventListener('click', (e) => {
         if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
-
         e.preventDefault();
 
         const cls = e.currentTarget.className.split(/\s+/);
@@ -154,15 +198,8 @@
         itv2.draft.corrosion = corrosion;
         const desgaste = itv2.draft.desgaste;
 
-        // SINCRONIZACIÓN FIREBASE (OFFLINE)
-        const idFirebase = itv2.id || itv2.customId;
-        if (idFirebase) {
-          const docRef = doc(db, "inspecciones_live", idFirebase);
-          setDoc(docRef, { 
-            ultimo_draft: itv2.draft,
-            lastUpdateAt: serverTimestamp() 
-          }, { merge: true }).catch(() => {});
-        }
+        // ACÁ SACAMOS EL SETDOC PARA QUE NO HAYA PROBLEMAS DE RED.
+        // LA PRÓXIMA PANTALLA SE ENCARGARÁ DE SUBIR ESTE DRAFT A FIREBASE EN EL FONDO.
 
         if (desgaste === 'G2' && corrosion === 'G2') {
           itv2.draft.tipo = '-';

@@ -168,7 +168,7 @@
 
     tubos.forEach((t, i) => {
       const estado = t.completedAt ? 'OK' : 'INCOMPLETO'; 
-      opt = document.createElement('option');
+      const opt = document.createElement('option'); // Corregido: agregado 'const'
       opt.value = String(i);
       opt.textContent = `Tubo ${t.nro} — ${estado}`;
       sel.appendChild(opt);
@@ -230,19 +230,28 @@
       return `SUD-${y}${m}${day}-${hh}${mm}${ss}`;
     }
 
-    // ===== Finalizar definitivamente =====
+    // ===== Finalizar definitivamente (VERSIÓN A PRUEBA DE CORTES) =====
     document.getElementById('btnCerrar').addEventListener('click', async () => {
-      const ok = confirm('¿Finalizar definitivamente? Esto guardará la intervención en Firebase y la cerrará.');
+      const ok = confirm('¿Finalizar definitivamente? Asegurate de tener buena señal de internet. Esto guardará la intervención y la cerrará.');
       if (!ok) return;
 
       const btnCerrar = document.getElementById('btnCerrar');
+      const textoOriginal = btnCerrar.textContent;
+      
+      // Bloqueamos el botón y cambiamos el texto/color para que el operador no toque nada
       btnCerrar.disabled = true;
-      btnCerrar.textContent = "Guardando...";
+      btnCerrar.style.backgroundColor = "#ffc107"; // Amarillo de precaución
+      btnCerrar.style.color = "#000";
+      btnCerrar.style.borderColor = "#e0a800";
+      btnCerrar.textContent = "⏳ Subiendo datos... NO CIERRES LA APP";
 
       try {
         const itvGuardada = JSON.parse(localStorage.getItem('intervencionActual') || 'null');
         const tubosGuardados = JSON.parse(localStorage.getItem('tubos') || '[]');
-        if (!itvGuardada) throw new Error("No hay datos en el teléfono");
+        if (!itvGuardada) throw new Error("No hay datos en el teléfono para guardar.");
+
+        // Calculamos el total real para el Dashboard
+        const totalReal = Array.isArray(tubosGuardados) ? tubosGuardados.length : 0;
 
         const payload = {
           cliente: itvGuardada.cliente || "",
@@ -252,14 +261,18 @@
           operador: itvGuardada.operador || "",
           ayudante: itvGuardada.ayudante || "",
           solicitado: itvGuardada.solicitado || "",
-          tubosCount: Array.isArray(tubosGuardados) ? tubosGuardados.length : 0,
-          intervencion: itvGuardada,
+          tubosCount: totalReal,
+          tuboActual: totalReal, 
+          intervencion: {
+            ...itvGuardada,
+            tuboActual: totalReal
+          },
           tubos: tubosGuardados
         };
 
         const docId = generarIdAmigable();
 
-        // 1) Guardar inspección final
+        // 1) Guardar inspección final (acá es donde se puede colgar si no hay internet)
         await guardarEnFirestore(payload, docId);
 
         // 2) ELIMINAR EL BORRADOR "EN VIVO"
@@ -271,9 +284,10 @@
           deleteDoc(doc(db, "inspecciones_live", idLive)).catch(err => console.warn("No se pudo borrar el live:", err));
         }
 
-        alert("✅ Inspección finalizada con éxito en Firebase.");
+        // Si llegó hasta acá, es porque FIREBASE CONFIRMÓ LA RECEPCIÓN.
+        alert("✅ ¡Inspección guardada con éxito en la base de datos!");
 
-        // 3) Limpiar localStorage
+        // 3) Recién ahora limpiamos el teléfono (Seguro de vida de datos)
         localStorage.removeItem('intervencionActual');
         localStorage.removeItem('tubos');
         localStorage.removeItem('editMode');
@@ -281,11 +295,17 @@
         localStorage.removeItem('lastPage');
 
         window.location.href = 'InicioSesion.html';
+
       } catch (e) {
-        console.error(e);
+        console.error("Error al guardar:", e);
+        // Si falló por internet, le devolvemos el botón a la normalidad para que reintente
         btnCerrar.disabled = false;
-        btnCerrar.textContent = "Finalizar definitivamente";
-        alert("❌ Error: " + e.message);
+        btnCerrar.style.backgroundColor = ""; // Vuelve a su color rojo original por el CSS
+        btnCerrar.style.color = "";
+        btnCerrar.style.borderColor = "";
+        btnCerrar.textContent = textoOriginal;
+        
+        alert("❌ Ocurrió un error de conexión.\nLos datos están a salvo en el teléfono. Por favor, movete a un lugar con mejor señal y volvé a tocar el botón.\n\nDetalle: " + e.message);
       }
     });
   </script>

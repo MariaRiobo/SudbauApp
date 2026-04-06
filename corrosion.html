@@ -140,7 +140,6 @@
       const idFirebase = itv.customId || itv.liveId;
       if (!idFirebase) return;
 
-      // 1. Guardar la cabecera (incluyendo el borrador actual)
       const headerRef = doc(db, "inspecciones_live", idFirebase);
       setDoc(headerRef, {
         cliente: itv.cliente || "",
@@ -152,7 +151,6 @@
         estado: "EN_PROCESO"
       }, { merge: true }).catch(() => {});
 
-      // 2. Revisamos los ÚLTIMOS 10 TUBOS y los subimos por si faltó alguno.
       tubos.forEach(t => {
         const d = t.draft || t;
         const nroTubo = String(t.nro || d.tuboNro);
@@ -170,7 +168,6 @@
       });
     }
 
-    // Disparamos la sincronización apenas abre la página
     sincronizarLiveDeFondo();
     window.addEventListener('online', sincronizarLiveDeFondo);
 
@@ -182,7 +179,7 @@
       blanco: 'UNGRADE'
     };
 
-    /* ===== Selección → guarda draft y lógica de salto (SIN FIREBASE) ===== */
+    /* ===== Selección → guarda draft y lógica de salto (REGLAS DE NEGOCIO) ===== */
     document.querySelectorAll('.botones-container .btn-color').forEach(a => {
       a.addEventListener('click', (e) => {
         if (a.classList.contains('desactivado')) { e.preventDefault(); return; }
@@ -198,9 +195,7 @@
         itv2.draft.corrosion = corrosion;
         const desgaste = itv2.draft.desgaste;
 
-        // ACÁ SACAMOS EL SETDOC PARA QUE NO HAYA PROBLEMAS DE RED.
-        // LA PRÓXIMA PANTALLA SE ENCARGARÁ DE SUBIR ESTE DRAFT A FIREBASE EN EL FONDO.
-
+        // --- REGLA 1: G2 (Desgaste) + G2 (Corrosión) → Tipo "-" y va a Cupla ---
         if (desgaste === 'G2' && corrosion === 'G2') {
           itv2.draft.tipo = '-';
           saveIntervencion(itv2);
@@ -208,7 +203,18 @@
           pushEvento('corrosionSeleccionada', { corrosion });
           pushEvento('tipoAutoSeleccionado', { tipo: '-', motivo: 'G2+G2' });
           window.location.href = 'cupla.html';
-        } else {
+        } 
+        // --- REGLA 2: G2 (Desgaste) + Corrosión G3, G4 o G5 → Tipo "CO" y va a Cupla ---
+        else if (desgaste === 'G2' && ['G3', 'G4', 'G5'].includes(corrosion)) {
+          itv2.draft.tipo = 'CO';
+          saveIntervencion(itv2);
+          syncTubeFromDraft();
+          pushEvento('corrosionSeleccionada', { corrosion });
+          pushEvento('tipoAutoSeleccionado', { tipo: 'CO', motivo: 'G2 + Corrosion Alta' });
+          window.location.href = 'cupla.html';
+        }
+        // --- CASO NORMAL: Sigue a Tipo ---
+        else {
           saveIntervencion(itv2);
           syncTubeFromDraft();
           pushEvento('corrosionSeleccionada', { corrosion });
